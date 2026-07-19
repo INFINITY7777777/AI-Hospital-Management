@@ -1,0 +1,33 @@
+/* Importing TailWindCSS framework */
+
+@import "tailwindcss";
+
+/* ==========================================================
+   GLOBAL RESET
+   These styles apply to the entire website.
+   ========================================================== */
+
+/* Removes default spaces by the broswers also known as CSS RESET */
+
+* {
+  margin : 0; 
+  padding : 0;
+  box-sizing : border-box;
+}
+
+/* Make body occupy full height */
+
+html,
+body,
+#root {
+  width : 100%;
+  min-height : 100vh;
+
+}
+
+/* Default font for the entire application */
+
+body {
+  font-family : Arial, Helvetica, sans-serif;
+  background-color : #f8fafc
+}
