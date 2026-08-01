@@ -3,8 +3,33 @@
 // Displays the list of all patients
 // ==========================================================
 
-import AddPatientForm from "../components/AddPatientForm"
+import { useState } from "react";
+
+import AddPatientForm from "../components/AddPatientForm";
+import PatientList from "../components/PatientList";
+
+
 function Patients() {
+
+    // ==========================================================
+    // REFRESH STATE
+    // Changes whenever a new patient is successfully added
+    // ==========================================================
+
+    const [refreshPatients, setRefreshPatients] = useState(false);
+
+
+    // ==========================================================
+    // HANDLE PATIENT ADDED
+    // Tells PatientList to fetch patients again
+    // ==========================================================
+
+    const handlePatientAdded = () => {
+
+        setRefreshPatients(!refreshPatients);
+
+    };
+
 
     return (
 
@@ -14,7 +39,15 @@ function Patients() {
                 Patient Management
             </h1>
 
-            <AddPatientForm />
+
+            <AddPatientForm
+                onPatientAdded={handlePatientAdded}
+            />
+
+
+            <PatientList
+                refreshPatients={refreshPatients}
+            />
 
         </div>
 

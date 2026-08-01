@@ -23,6 +23,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Patients from "./pages/Patients";
+import PatientDetails from "./pages/PatientDetails";
+import EditPatient from "./pages/EditPatient";
 
 
 function App() {
@@ -47,6 +49,10 @@ function App() {
 
             {/* Patients */}
             <Route path="/Patients" element={<Patients />} />
+
+            <Route path="/patients/:id" element={<PatientDetails />} />
+
+            <Route path="/patients/:id/edit" element={<EditPatient />} />
 
         </Routes>
 
