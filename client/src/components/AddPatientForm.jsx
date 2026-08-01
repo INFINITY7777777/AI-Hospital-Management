@@ -9,6 +9,7 @@
 // ==========================================================
 
 import { useState } from "react";
+import axios from "axios";
 
 
 function AddPatientForm() {
@@ -62,13 +63,29 @@ function AddPatientForm() {
     // Handles form submission
     // ==========================================================
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
 
         // Prevent page refresh
         event.preventDefault();
 
-        // Display entered data (Temporary)
-        console.log(patientData);
+            try {
+
+        const response = await axios.post(
+            "http://localhost:5000/api/patients",
+            patientData
+        );
+
+        console.log(response.data);
+
+        alert("Patient added successfully!");
+
+    } catch (error) {
+
+        console.error("Error adding patient:", error);
+
+        alert("Failed to add patient.");
+
+    }
 
     };
 

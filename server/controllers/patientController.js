@@ -36,8 +36,55 @@ const addPatient = async (req, res) => {
 
         console.log(req.body);
 
-        res.status(200).json({
-            message: "Patient Controller Connected Successfully!"
+        // ==========================================================
+        // INSERT PATIENT INTO DATABASE
+        // ==========================================================
+
+        const result = await db.query(
+            `
+            INSERT INTO patients (
+                patient_name,
+                age,
+                gender,
+                blood_group,
+                phone,
+                address,
+                emergency_contact,
+                doctor,
+                ward,
+                bed_number,
+                diagnosis,
+                admission_date
+            )
+            VALUES (
+                $1, $2, $3, $4, $5, $6,
+                $7, $8, $9, $10, $11, $12
+            )
+            RETURNING *;
+            `,
+            [
+                patientName,
+                age,
+                gender,
+                bloodGroup,
+                phone,
+                address,
+                emergencyContact,
+                doctor,
+                ward,
+                bedNumber,
+                diagnosis,
+                admissionDate
+            ]
+        );
+
+        // ==========================================================
+        // SEND SUCCESS RESPONSE
+        // ==========================================================
+
+        res.status(201).json({
+            message: "Patient added successfully",
+            patient: result.rows[0]
         });
 
     }
