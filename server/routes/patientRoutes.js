@@ -9,7 +9,8 @@ const router = express.Router();
 
 // Import Patient Controller
 const {
-    addPatient
+    addPatient,
+    getAllPatients
 } = require("../controllers/patientController");
 
 // ==========================================================
@@ -18,5 +19,7 @@ const {
 // ==========================================================
 
 router.post("/", addPatient);
+
+router.get("/", getAllPatients);
 
 module.exports = router;

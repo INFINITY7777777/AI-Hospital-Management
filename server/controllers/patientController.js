@@ -101,8 +101,41 @@ const addPatient = async (req, res) => {
 
 };
 
+// ==========================================================
+// GET ALL PATIENTS
+// Fetches all patients from the database
+// ==========================================================
+
+const getAllPatients = async (req, res) => {
+
+    try {
+
+        // Fetch a;; Patients
+        const result = await db.query(
+            `SELECT * 
+            FROM patients 
+            ORDER BY created_at DESC`
+        );
+
+        // Sends Patients to Frontend
+        res.status(200).json({
+            patients : result.rows
+        });
+
+    } catch (error) {
+        console.error("Pateint Error :- ", error);
+
+        res.status(500).json({
+            error : "Failed to fetch Pateints!"
+        });
+
+    }
+
+};
+
 module.exports = {
 
-    addPatient
+    addPatient,
+    getAllPatients
 
 };
