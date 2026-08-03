@@ -84,6 +84,44 @@ function PatientDetails() {
     }
 
 
+    // ==========================================================
+// DELETE PATIENT
+// Deletes the current patient from the database
+// ==========================================================
+
+    const handleDeletePatient = async () => {
+
+        // Ask for confirmation
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this patient?"
+        );
+
+        // Stop if user cancels
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+
+            // Send DELETE request
+            await axios.delete(
+                `http://localhost:5000/api/patients/${patient.id}`
+            );
+
+            // Navigate back to patient list
+            navigate("/patients");
+
+        } catch (error) {
+
+            console.error(
+                "Error deleting patient:",
+                error
+            );
+
+        }
+
+    };
+
     return (
 
         <div className="bg-white rounded-xl shadow p-6 mt-6">
@@ -244,6 +282,13 @@ function PatientDetails() {
                 className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition"
             >
                 Edit Patient
+            </button>
+
+            <button
+                onClick={handleDeletePatient}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition"
+            >
+                Delete Patient
             </button>
 
         </div>

@@ -22,10 +22,14 @@ function Sidebar() {
                     🏠 Dashboard
                 </li>
 
-                <li className="cursor-pointer hover:text-blue-600">
-                    👨‍⚕️ Doctors
+                <li> 
+                    <Link
+                        to="/doctors"
+                        className="hover:text-blue-600"
+                    >
+                        👨‍⚕️ Doctors
+                    </Link>
                 </li>
-
                 <li>
 
                     <Link
@@ -38,11 +42,14 @@ function Sidebar() {
                 </li>
 
                 <li className="cursor-pointer hover:text-blue-600">
-                    📅 Appointments
+                    <Link to="/appointments">
+                        📅 Appointments
+                    </Link>
                 </li>
 
                 <li className="cursor-pointer hover:text-blue-600">
                     💊 Pharmacy
+                    
                 </li>
 
                 <li className="cursor-pointer hover:text-blue-600">

@@ -22,9 +22,17 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+
 import Patients from "./pages/Patients";
 import PatientDetails from "./pages/PatientDetails";
 import EditPatient from "./pages/EditPatient";
+
+import Doctors from "./pages/Doctors"
+import DoctorDetails from "./pages/DoctorDetails";
+import EditDoctor from "./pages/EditDoctor";
+
+import Appointments from "./pages/Appointments"
+import AppointmentDetails from "./pages/AppointmentDetails";
 
 
 function App() {
@@ -54,6 +62,18 @@ function App() {
 
             <Route path="/patients/:id/edit" element={<EditPatient />} />
 
+            {/* Doctors */}
+            <Route path="/Doctors"element={<Doctors />} />
+
+            <Route path="/doctors/:id" element={<DoctorDetails />} />
+
+            <Route path="/doctors/:id/edit" element={<EditDoctor />} />
+
+            {/* Appointments */}
+            <Route path="/appointments" element={<Appointments />} />    
+
+            <Route path="/appointments/:id" element={<AppointmentDetails />} />     
+        
         </Routes>
 
     </BrowserRouter>
