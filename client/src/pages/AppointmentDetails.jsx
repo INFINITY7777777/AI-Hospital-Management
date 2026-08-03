@@ -39,6 +39,11 @@ function AppointmentDetails() {
 
     const [error, setError] = useState("");
 
+    // ==========================================================
+    // DELETE STATE
+    // ==========================================================
+    
+    const [deleting, setDeleting] = useState(false);
 
     // ==========================================================
     // FETCH APPOINTMENT
@@ -84,6 +89,73 @@ function AppointmentDetails() {
         fetchAppointment();
 
     }, [id]);
+
+    // ==========================================================
+    // DELETE APPOINTMENT
+    // ==========================================================
+
+    const handleDelete = async () => {
+
+        // ==========================================================
+        // CONFIRM DELETE
+        // ==========================================================
+
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this appointment?"
+        );
+
+
+        // ==========================================================
+        // STOP IF USER CANCELS
+        // ==========================================================
+
+        if (!confirmed) {
+
+            return;
+
+        }
+
+
+        try {
+
+            setDeleting(true);
+
+
+            // ==========================================================
+            // DELETE APPOINTMENT
+            // ==========================================================
+
+            await axios.delete(
+                `http://localhost:5000/api/appointments/${id}`
+            );
+
+
+            // ==========================================================
+            // REDIRECT TO APPOINTMENT LIST
+            // ==========================================================
+
+            navigate("/appointments");
+
+        } catch (error) {
+
+            console.error(
+                "Error deleting appointment:",
+                error
+            );
+
+
+            setError(
+
+                error.response?.data?.error ||
+                "Failed to delete appointment"
+
+            );
+
+            setDeleting(false);
+
+        }
+
+    };
 
 
     // ==========================================================
@@ -173,19 +245,58 @@ function AppointmentDetails() {
 
         <div className="p-6">
 
+            <div className="flex gap-4 mb-6">
 
-            {/* ==========================================================
-                BACK BUTTON
-            ========================================================== */}
+                {/* ==========================================================
+                    BACK BUTTON
+                ========================================================== */}
 
-            <button
-                onClick={() => navigate("/appointments")}
-                className="mb-6 px-5 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-            >
+                <button
+                    onClick={() => navigate("/appointments")}
+                    className="px-5 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
 
-                ← Back to Appointments
+                    ← Back to Appointments
 
-            </button>
+                </button>
+
+
+                {/* ==========================================================
+                    EDIT BUTTON
+                ========================================================== */}
+
+                <button
+                    onClick={() =>
+                        navigate(
+                            `/appointments/${appointment.id}/edit`
+                        )
+                    }
+                    className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+
+                    Edit Appointment
+
+                </button>
+
+
+                {/* ==========================================================
+                    DELETE BUTTON
+                ========================================================== */}
+
+                <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+
+                    {deleting
+                        ? "Deleting..."
+                        : "Delete Appointment"
+                    }
+
+                </button>
+
+            </div>
 
 
             {/* ==========================================================

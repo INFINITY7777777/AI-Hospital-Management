@@ -28,8 +28,19 @@ const authRoutes = require("./routes/authRoutes");
 // Patient Routes
 const patientRoutes = require("./routes/patientRoutes");
 
+// Doctor Routes
+const doctorRoutes = require("./routes/doctorRoutes");
+
+// Appointment Routes
+const appointmentRoutes = require("./routes/appointmentRoutes");
+
+// Dashboard Routes
+const dashboardRoutes = require("./routes/dashboardRoutes");
+
 // JWT Authentication Middleware
 const verifyToken = require("./middleware/authMiddleware");
+
+
 
 
 // ========================= INITIALIZE EXPRESS =========================
@@ -56,6 +67,15 @@ app.use("/api/auth", authRoutes);
 
 // Patient APIs
 app.use("/api/patients", patientRoutes);
+
+// Doctor APIs
+app.use("/api/doctors", doctorRoutes);
+
+// Appointment APIs
+app.use("/api/appointments", appointmentRoutes);
+
+// Dashboard APIs
+app.use("/api/dashboard", dashboardRoutes);
 
 
 // ========================= TEST ROUTE =========================

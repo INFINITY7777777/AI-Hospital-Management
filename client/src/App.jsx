@@ -33,6 +33,7 @@ import EditDoctor from "./pages/EditDoctor";
 
 import Appointments from "./pages/Appointments"
 import AppointmentDetails from "./pages/AppointmentDetails";
+import EditAppointment from "./pages/EditAppointment";
 
 
 function App() {
@@ -72,7 +73,9 @@ function App() {
             {/* Appointments */}
             <Route path="/appointments" element={<Appointments />} />    
 
-            <Route path="/appointments/:id" element={<AppointmentDetails />} />     
+            <Route path="/appointments/:id" element={<AppointmentDetails />} />
+
+            <Route path="/appointments/:id/edit" element={<EditAppointment />} />     
         
         </Routes>
 
