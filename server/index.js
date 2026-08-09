@@ -37,8 +37,16 @@ const appointmentRoutes = require("./routes/appointmentRoutes");
 // Dashboard Routes
 const dashboardRoutes = require("./routes/dashboardRoutes");
 
+
+// Bed Routes
+const bedRoutes = require("./routes/bedRoutes");
+
+// Admission Routes
+const admissionRoutes = require("./routes/admissionRoutes");
+
 // JWT Authentication Middleware
 const verifyToken = require("./middleware/authMiddleware");
+
 
 
 
@@ -76,6 +84,12 @@ app.use("/api/appointments", appointmentRoutes);
 
 // Dashboard APIs
 app.use("/api/dashboard", dashboardRoutes);
+
+// Bed APIs
+app.use("/api/beds", bedRoutes);
+
+// Admission APIs
+app.use("/api/admissions", admissionRoutes);
 
 
 // ========================= TEST ROUTE =========================

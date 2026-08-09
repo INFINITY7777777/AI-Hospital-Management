@@ -78,6 +78,58 @@ const getDashboardStats = async (req, res) => {
 
 
         // ==========================================================
+        // GET TOTAL ADMISSIONS
+        // ==========================================================
+
+        const admissionsResult = await db.query(
+            `
+            SELECT COUNT(*) AS total_admissions
+            FROM admissions;
+            `
+        );
+
+
+        // ==========================================================
+        // GET ACTIVE ADMISSIONS
+        // Only currently admitted patients
+        // ==========================================================
+
+        const activeAdmissionsResult = await db.query(
+            `
+            SELECT COUNT(*) AS active_admissions
+            FROM admissions
+            WHERE status = 'Admitted';
+            `
+        );
+
+
+        // ==========================================================
+        // GET OCCUPIED BEDS
+        // ==========================================================
+
+        const occupiedBedsResult = await db.query(
+            `
+            SELECT COUNT(*) AS occupied_beds
+            FROM beds
+            WHERE status = 'Occupied';
+            `
+        );
+
+
+        // ==========================================================
+        // GET AVAILABLE BEDS
+        // ==========================================================
+
+        const availableBedsResult = await db.query(
+            `
+            SELECT COUNT(*) AS available_beds
+            FROM beds
+            WHERE status = 'Available';
+            `
+        );
+
+
+        // ==========================================================
         // GET RECENT PATIENTS
         // Latest 5 patients
         // ==========================================================
@@ -100,33 +152,85 @@ const getDashboardStats = async (req, res) => {
 
             statistics: {
 
+                // ==================================================
+                // PATIENT STATISTICS
+                // ==================================================
+
                 totalPatients:
                     Number(
                         patientsResult.rows[0].total_patients
                     ),
+
+
+                // ==================================================
+                // DOCTOR STATISTICS
+                // ==================================================
 
                 totalDoctors:
                     Number(
                         doctorsResult.rows[0].total_doctors
                     ),
 
+
+                // ==================================================
+                // APPOINTMENT STATISTICS
+                // ==================================================
+
                 totalAppointments:
                     Number(
                         appointmentsResult.rows[0].total_appointments
                     ),
+
 
                 todayAppointments:
                     Number(
                         todayAppointmentsResult.rows[0].today_appointments
                     ),
 
+
                 upcomingAppointments:
                     Number(
                         upcomingAppointmentsResult.rows[0].upcoming_appointments
+                    ),
+
+
+                // ==================================================
+                // ADMISSION STATISTICS
+                // ==================================================
+
+                totalAdmissions:
+                    Number(
+                        admissionsResult.rows[0].total_admissions
+                    ),
+
+
+                activeAdmissions:
+                    Number(
+                        activeAdmissionsResult.rows[0].active_admissions
+                    ),
+
+
+                // ==================================================
+                // BED STATISTICS
+                // ==================================================
+
+                occupiedBeds:
+                    Number(
+                        occupiedBedsResult.rows[0].occupied_beds
+                    ),
+
+
+                availableBeds:
+                    Number(
+                        availableBedsResult.rows[0].available_beds
                     )
 
             },
 
+
+            // ======================================================
+            // RECENT PATIENTS
+            // ======================================================
 
             recentPatients:
                 recentPatientsResult.rows
@@ -140,7 +244,7 @@ const getDashboardStats = async (req, res) => {
     // ERROR HANDLING
     // ==========================================================
 
-    catch (error) {
+   catch (error) {
 
         console.error(
             "[Dashboard Error]:",
