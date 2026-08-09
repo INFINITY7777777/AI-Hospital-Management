@@ -73,6 +73,7 @@ import BedDetails from "./pages/BedDetails";
 import Admissions from "./pages/Admissions";
 import AddAdmissionForm from "./pages/AddAdmissionForm";
 import AdmissionDetails from "./pages/AdmissionDetails";
+import EditAdmission from "./pages/EditAdmission";
 
 
 // ==========================================================
@@ -230,6 +231,10 @@ function App() {
                     element={<AdmissionDetails />}
                 />
 
+                <Route
+                    path="/admissions/:id/edit"
+                    element={<EditAdmission />}
+                />
 
             </Routes>
 

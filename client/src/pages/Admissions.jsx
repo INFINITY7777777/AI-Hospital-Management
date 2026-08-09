@@ -2,7 +2,7 @@
 // REACT HOOKS
 // ==========================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 // ==========================================================
 // AXIOS
@@ -62,16 +62,63 @@ function Admissions() {
 
     const [error, setError] = useState("");
 
+    // ==========================================================
+    // SEARCH STATE
+    // Used to search admissions by patient name
+    // ==========================================================
+
+    const [searchTerm, setSearchTerm] = useState("");
+
+
+    // ==========================================================
+    // STATUS FILTER
+    // Used to filter admissions by status
+    // ==========================================================
+
+    const [statusFilter, setStatusFilter] = useState("All");
+
 
     // ==========================================================
     // FETCH ADMISSIONS
+    // Loads all admissions from backend
     // ==========================================================
 
-    // Do NOT keep fetchAdmissions here
+    const fetchAdmissions = useCallback(async () => {
+
+        try {
+
+            setError("");
+
+            const response = await axios.get(
+                "http://localhost:5000/api/admissions"
+            );
+
+            setAdmissions(
+                response.data.admissions || []
+            );
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Error fetching admissions:",
+                error
+            );
+
+            setError(
+                error.response?.data?.error ||
+                "Failed to fetch admissions"
+            );
+
+        }
+
+    }, []);
 
 
     // ==========================================================
     // LOAD ADMISSIONS
+    // Runs when Admissions page opens
     // ==========================================================
 
     useEffect(() => {
@@ -86,42 +133,13 @@ function Admissions() {
 
         }
 
-
         const loadAdmissions = async () => {
 
             try {
 
                 setLoading(true);
 
-                setError("");
-
-
-                const response = await axios.get(
-                    "http://localhost:5000/api/admissions"
-                );
-
-
-                setAdmissions(
-                    response.data.admissions || []
-                );
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "Error fetching admissions:",
-                    error
-                );
-
-
-                setError(
-
-                    error.response?.data?.error ||
-
-                    "Failed to fetch admissions"
-
-                );
+                await fetchAdmissions();
 
             }
 
@@ -133,27 +151,54 @@ function Admissions() {
 
         };
 
-
         loadAdmissions();
 
-    }, [navigate]);
-
-
+    }, [navigate, fetchAdmissions]);
     // ==========================================================
-    // INITIAL FETCH
+    // FILTER ADMISSIONS
     // ==========================================================
 
-    useEffect(() => {
-
-        const token = localStorage.getItem("token");
+    const filteredAdmissions = admissions.filter((admission) => {
 
         // ==========================================================
-        // CHECK LOGIN
+        // SEARCH BY PATIENT NAME
         // ==========================================================
 
-        if (!token) {
+        const matchesSearch =
+            admission.patient_name
+                ?.toLowerCase()
+                .includes(searchTerm.toLowerCase());
 
-            navigate("/");
+
+        // ==========================================================
+        // FILTER BY STATUS
+        // ==========================================================
+
+        const matchesStatus =
+            statusFilter === "All" ||
+            admission.status === statusFilter;
+
+
+        return matchesSearch && matchesStatus;
+
+    });
+
+    // ==========================================================
+    // DELETE ADMISSION
+    // Only discharged admissions can be deleted
+    // ==========================================================
+
+    const handleDeleteAdmission = async (admission) => {
+
+        // ==========================================================
+        // SAFETY CHECK
+        // ==========================================================
+
+        if (admission.status !== "Discharged") {
+
+            alert(
+                "Active admissions cannot be deleted. Discharge the patient first."
+            );
 
             return;
 
@@ -161,60 +206,75 @@ function Admissions() {
 
 
         // ==========================================================
-        // LOAD ADMISSIONS
+        // CONFIRM DELETE
         // ==========================================================
 
-        const loadAdmissions = async () => {
+        const confirmDelete = window.confirm(
 
-            try {
+            `Are you sure you want to delete the admission record for ${admission.patient_name}?`
 
-                setLoading(true);
-
-                setError("");
+        );
 
 
-                const response = await axios.get(
-                    "http://localhost:5000/api/admissions"
-                );
+        if (!confirmDelete) {
+
+            return;
+
+        }
 
 
-                setAdmissions(
-                    response.data.admissions || []
-                );
+        try {
 
-            }
+            // ==========================================================
+            // DELETE API
+            // ==========================================================
 
-            catch (error) {
+            await axios.delete(
 
-                console.error(
-                    "Error fetching admissions:",
-                    error
-                );
+                `http://localhost:5000/api/admissions/${admission.id}`
 
-
-                setError(
-
-                    error.response?.data?.error ||
-
-                    "Failed to fetch admissions"
-
-                );
-
-            }
-
-            finally {
-
-                setLoading(false);
-
-            }
-
-        };
+            );
 
 
-        loadAdmissions();
+            // ==========================================================
+            // SUCCESS MESSAGE
+            // ==========================================================
 
-    }, [navigate]);
+            alert(
+                "Admission deleted successfully"
+            );
 
+
+            // ==========================================================
+            // REFRESH ADMISSIONS
+            // ==========================================================
+
+            await fetchAdmissions();
+
+        }
+
+        catch (error) {
+
+            console.error(
+
+                "Error deleting admission:",
+
+                error
+
+            );
+
+
+            alert(
+
+                error.response?.data?.error ||
+
+                "Failed to delete admission"
+
+            );
+
+        }
+
+    };
 
     // ==========================================================
     // LOADING SCREEN
@@ -322,6 +382,89 @@ function Admissions() {
                             + Add Admission
 
                         </button>
+
+                    </div>
+
+                    {/* ==========================================================
+                        SEARCH AND FILTER
+                    ========================================================== */}
+
+                    <div className="bg-white rounded-xl shadow p-4 mb-6">
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                            {/* ======================================================
+                                SEARCH
+                            ====================================================== */}
+
+                            <div>
+
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+
+                                    Search Patient
+
+                                </label>
+
+                                <input
+
+                                    type="text"
+
+                                    value={searchTerm}
+
+                                    onChange={(event) =>
+                                        setSearchTerm(event.target.value)
+                                    }
+
+                                    placeholder="Search by patient name..."
+
+                                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+
+                                />
+
+                            </div>
+
+
+                            {/* ======================================================
+                                STATUS FILTER
+                            ====================================================== */}
+
+                            <div>
+
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+
+                                    Filter by Status
+
+                                </label>
+
+                                <select
+
+                                    value={statusFilter}
+
+                                    onChange={(event) =>
+                                        setStatusFilter(event.target.value)
+                                    }
+
+                                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+
+                                >
+
+                                    <option value="All">
+                                        All
+                                    </option>
+
+                                    <option value="Admitted">
+                                        Admitted
+                                    </option>
+
+                                    <option value="Discharged">
+                                        Discharged
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
 
                     </div>
 
@@ -436,7 +579,7 @@ function Admissions() {
 
                                 <tbody>
 
-                                    {admissions.map((admission) => (
+                                    {filteredAdmissions.map((admission) => (
 
                                         <tr
 
@@ -569,6 +712,28 @@ function Admissions() {
                                                     View
 
                                                 </button>
+
+                                                {/* ==========================================================
+                                                    DELETE ADMISSION
+                                                ========================================================== */}
+
+                                                {admission.status === "Discharged" && (
+
+                                                    <button
+
+                                                        onClick={() =>
+                                                            handleDeleteAdmission(admission)
+                                                        }
+
+                                                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+
+                                                    >
+
+                                                        Delete
+
+                                                    </button>
+
+                                                )}
 
                                             </td>
 

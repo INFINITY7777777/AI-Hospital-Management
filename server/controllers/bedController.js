@@ -570,6 +570,7 @@ const deleteBed = async (req, res) => {
 // ==========================================================
 // ASSIGN BED TO PATIENT
 // Changes bed status to Occupied
+// Also links the bed to the patient's active admission
 // ==========================================================
 
 const assignBed = async (req, res) => {
@@ -613,11 +614,8 @@ const assignBed = async (req, res) => {
 
             `
             SELECT id, patient_name
-
             FROM patients
-
             WHERE id = $1;
-
             `,
 
             [patientId]
@@ -644,11 +642,8 @@ const assignBed = async (req, res) => {
 
             `
             SELECT *
-
             FROM beds
-
             WHERE id = $1;
-
             `,
 
             [id]
@@ -675,8 +670,7 @@ const assignBed = async (req, res) => {
 
             return res.status(400).json({
 
-                error:
-                    "Bed is not available for assignment"
+                error: "Bed is not available for assignment"
 
             });
 
@@ -684,7 +678,27 @@ const assignBed = async (req, res) => {
 
 
         // ==========================================================
-        // ASSIGN PATIENT TO BED
+        // CHECK PATIENT'S ACTIVE ADMISSION
+        // ==========================================================
+
+        const admissionResult = await db.query(
+
+            `
+            SELECT id, bed_id, status
+            FROM admissions
+            WHERE patient_id = $1
+            AND status = 'Admitted'
+            ORDER BY created_at DESC
+            LIMIT 1;
+            `,
+
+            [patientId]
+
+        );
+
+
+        // ==========================================================
+        // ASSIGN BED TO PATIENT
         // ==========================================================
 
         const result = await db.query(
@@ -701,25 +715,95 @@ const assignBed = async (req, res) => {
             WHERE id = $2
 
             RETURNING *;
-
             `,
 
             [
-
                 patientId,
-
                 id
-
             ]
 
         );
 
 
         // ==========================================================
+        // LINK BED TO ACTIVE ADMISSION
+        // ==========================================================
+
+        if (admissionResult.rows.length > 0) {
+
+            const admission = admissionResult.rows[0];
+
+
+            // ======================================================
+            // CHECK IF ANOTHER BED IS ALREADY ASSIGNED
+            // ======================================================
+
+            if (admission.bed_id && admission.bed_id !== Number(id)) {
+
+                // Undo the bed assignment we just made
+
+                await db.query(
+
+                    `
+                    UPDATE beds
+
+                    SET
+
+                        patient_id = NULL,
+
+                        status = 'Available'
+
+                    WHERE id = $1;
+                    `,
+
+                    [id]
+
+                );
+
+
+                return res.status(400).json({
+
+                    error:
+                        "Patient already has another bed assigned"
+
+                });
+
+            }
+
+
+            // ======================================================
+            // UPDATE ADMISSION
+            // ======================================================
+
+            await db.query(
+
+                `
+                UPDATE admissions
+
+                SET
+
+                    bed_id = $1,
+
+                    updated_at = CURRENT_TIMESTAMP
+
+                WHERE id = $2;
+                `,
+
+                [
+                    id,
+                    admission.id
+                ]
+
+            );
+
+        }
+
+
+        // ==========================================================
         // SUCCESS RESPONSE
         // ==========================================================
 
-        res.status(200).json({
+        return res.status(200).json({
 
             message: "Bed assigned successfully",
 
@@ -745,7 +829,7 @@ const assignBed = async (req, res) => {
         );
 
 
-        res.status(500).json({
+        return res.status(500).json({
 
             error: "Failed to assign bed"
 
@@ -759,6 +843,7 @@ const assignBed = async (req, res) => {
 // RELEASE BED
 // Removes patient from bed
 // Changes status back to Available
+// Also removes the bed from the patient's active admission
 // ==========================================================
 
 const releaseBed = async (req, res) => {
@@ -779,12 +864,15 @@ const releaseBed = async (req, res) => {
         const bedResult = await db.query(
 
             `
-            SELECT *
+            SELECT
+                id,
+                bed_number,
+                patient_id,
+                status
 
             FROM beds
 
             WHERE id = $1;
-
             `,
 
             [id]
@@ -803,11 +891,14 @@ const releaseBed = async (req, res) => {
         }
 
 
+        const bed = bedResult.rows[0];
+
+
         // ==========================================================
         // CHECK IF BED IS OCCUPIED
         // ==========================================================
 
-        if (bedResult.rows[0].status !== "Occupied") {
+        if (bed.status !== "Occupied") {
 
             return res.status(400).json({
 
@@ -836,7 +927,6 @@ const releaseBed = async (req, res) => {
             WHERE id = $1
 
             RETURNING *;
-
             `,
 
             [id]
@@ -845,10 +935,44 @@ const releaseBed = async (req, res) => {
 
 
         // ==========================================================
+        // REMOVE BED FROM ACTIVE ADMISSION
+        // ==========================================================
+
+        if (bed.patient_id) {
+
+            await db.query(
+
+                `
+                UPDATE admissions
+
+                SET
+
+                    bed_id = NULL,
+
+                    updated_at = CURRENT_TIMESTAMP
+
+                WHERE patient_id = $1
+
+                AND status = 'Admitted'
+
+                AND bed_id = $2;
+                `,
+
+                [
+                    bed.patient_id,
+                    id
+                ]
+
+            );
+
+        }
+
+
+        // ==========================================================
         // SUCCESS RESPONSE
         // ==========================================================
 
-        res.status(200).json({
+        return res.status(200).json({
 
             message: "Bed released successfully",
 
@@ -874,7 +998,7 @@ const releaseBed = async (req, res) => {
         );
 
 
-        res.status(500).json({
+        return res.status(500).json({
 
             error: "Failed to release bed"
 

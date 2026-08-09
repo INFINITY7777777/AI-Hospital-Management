@@ -607,6 +607,7 @@ const dischargePatient = async (req, res) => {
 // ==========================================================
 // DELETE ADMISSION
 // DELETE /api/admissions/:id
+// Only discharged admissions can be deleted.
 // ==========================================================
 
 const deleteAdmission = async (req, res) => {
@@ -615,6 +616,61 @@ const deleteAdmission = async (req, res) => {
 
         const { id } = req.params;
 
+
+        // ==========================================================
+        // FIND ADMISSION
+        // ==========================================================
+
+        const admissionResult = await pool.query(
+
+            `SELECT
+                id,
+                status
+             FROM admissions
+             WHERE id = $1`,
+
+            [id]
+
+        );
+
+
+        // ==========================================================
+        // CHECK IF ADMISSION EXISTS
+        // ==========================================================
+
+        if (admissionResult.rows.length === 0) {
+
+            return res.status(404).json({
+
+                error: "Admission not found"
+
+            });
+
+        }
+
+
+        const admission = admissionResult.rows[0];
+
+
+        // ==========================================================
+        // PREVENT DELETING ACTIVE ADMISSION
+        // ==========================================================
+
+        if (admission.status !== "Discharged") {
+
+            return res.status(400).json({
+
+                error:
+                    "Active admissions cannot be deleted. Discharge the patient first."
+
+            });
+
+        }
+
+
+        // ==========================================================
+        // DELETE ADMISSION
+        // ==========================================================
 
         const result = await pool.query(
 
@@ -627,16 +683,9 @@ const deleteAdmission = async (req, res) => {
         );
 
 
-        if (result.rows.length === 0) {
-
-            return res.status(404).json({
-
-                error: "Admission not found"
-
-            });
-
-        }
-
+        // ==========================================================
+        // SUCCESS RESPONSE
+        // ==========================================================
 
         return res.status(200).json({
 
@@ -647,6 +696,11 @@ const deleteAdmission = async (req, res) => {
         });
 
     }
+
+
+    // ==========================================================
+    // ERROR HANDLING
+    // ==========================================================
 
     catch (error) {
 
@@ -668,7 +722,6 @@ const deleteAdmission = async (req, res) => {
     }
 
 };
-
 
 // ==========================================================
 // EXPORT CONTROLLER FUNCTIONS

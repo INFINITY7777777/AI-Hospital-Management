@@ -289,7 +289,7 @@ function AdmissionDetails() {
     // ERROR / NOT FOUND
     // ==========================================================
 
-    if (error && !admission) {
+    if (!admission) {
 
         return (
 
@@ -310,19 +310,37 @@ function AdmissionDetails() {
                         </div>
 
 
-                        <button
+                        <div className="flex gap-3">
 
-                            onClick={() =>
-                                navigate("/admissions")
-                            }
+                            <button
 
-                            className="bg-gray-600 text-white px-5 py-2 rounded-lg"
+                                onClick={() =>
+                                    navigate(`/admissions/${id}/edit`)
+                                }
 
-                        >
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
 
-                            Back to Admissions
+                            >
 
-                        </button>
+                                Edit Admission
+
+                            </button>
+
+                            <button
+
+                                onClick={() =>
+                                    navigate("/admissions")
+                                }
+
+                                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+
+                            >
+
+                                Back to Admissions
+
+                            </button>
+
+                        </div>
 
                     </div>
 
@@ -377,33 +395,51 @@ function AdmissionDetails() {
                         <div>
 
                             <h1 className="text-3xl font-bold">
-
                                 Admission Details
-
                             </h1>
 
                             <p className="text-gray-500">
-
                                 View patient admission information
-
                             </p>
 
                         </div>
 
+                        <div className="flex gap-3">
 
-                        <button
+                            {/* EDIT ADMISSION */}
 
-                            onClick={() =>
-                                navigate("/admissions")
-                            }
+                            <button
 
-                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                                onClick={() =>
+                                    navigate(`/admissions/${id}/edit`)
+                                }
 
-                        >
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
 
-                            Back to Admissions
+                            >
 
-                        </button>
+                                Edit Admission
+
+                            </button>
+
+
+                            {/* BACK */}
+
+                            <button
+
+                                onClick={() =>
+                                    navigate("/admissions")
+                                }
+
+                                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+
+                            >
+
+                                Back to Admissions
+
+                            </button>
+
+                        </div>
 
                     </div>
 
