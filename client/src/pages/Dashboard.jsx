@@ -72,7 +72,15 @@ function Dashboard() {
 
         todayAppointments: 0,
 
-        upcomingAppointments: 0
+        upcomingAppointments: 0,
+
+        totalAdmissions: 0,
+
+        activeAdmissions: 0,
+
+        occupiedBeds: 0,
+
+        availableBeds: 0
 
     });
 
@@ -337,7 +345,7 @@ function Dashboard() {
                         DASHBOARD CARDS
                     ========================================================== */}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
 
                         {/* ==========================================================
@@ -406,6 +414,38 @@ function Dashboard() {
 
                             }
 
+                        />
+
+                        <DashboardCard
+                            title="Total Admissions"
+                            value={statistics.totalAdmissions}
+                            onClick={() =>
+                                navigate("/admissions")
+                            }
+                        />
+
+                        <DashboardCard
+                            title="Active Admissions"
+                            value={statistics.activeAdmissions}
+                            onClick={() =>
+                                navigate("/admissions")
+                            }
+                        />
+
+                        <DashboardCard
+                            title="Occupied Beds"
+                            value={statistics.occupiedBeds}
+                            onClick={() =>
+                                navigate("/beds")
+                            }
+                        />
+
+                        <DashboardCard
+                            title="Available Beds"
+                            value={statistics.availableBeds}
+                            onClick={() =>
+                                navigate("/beds")
+                            }
                         />
 
 

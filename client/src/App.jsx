@@ -1,90 +1,247 @@
 // ==========================================================
 // MAIN APP COMPONENT
-// This is the root component of our Hospital Management System.
-// Every page will eventually be displayed from here.
-// ==========================================================
-import './App.css'
-
-// ==========================================================
-// REACT ROUTER IMPORTS
-// BrowserRouter enables page navigation.
-// Routes contains all routes.
-// Route defines individual pages.
 // ==========================================================
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import "./App.css";
+
 
 // ==========================================================
-// PAGE IMPORTS
-// Import all pages that will be used.
+// REACT ROUTER
+// ==========================================================
+
+import {
+    BrowserRouter,
+    Routes,
+    Route
+} from "react-router-dom";
+
+
+// ==========================================================
+// AUTH PAGES
 // ==========================================================
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+
+
+// ==========================================================
+// DASHBOARD
+// ==========================================================
+
 import Dashboard from "./pages/Dashboard";
+
+
+// ==========================================================
+// PATIENT PAGES
+// ==========================================================
 
 import Patients from "./pages/Patients";
 import PatientDetails from "./pages/PatientDetails";
 import EditPatient from "./pages/EditPatient";
 
-import Doctors from "./pages/Doctors"
+
+// ==========================================================
+// DOCTOR PAGES
+// ==========================================================
+
+import Doctors from "./pages/Doctors";
 import DoctorDetails from "./pages/DoctorDetails";
 import EditDoctor from "./pages/EditDoctor";
 
-import Appointments from "./pages/Appointments"
+
+// ==========================================================
+// APPOINTMENT PAGES
+// ==========================================================
+
+import Appointments from "./pages/Appointments";
 import AppointmentDetails from "./pages/AppointmentDetails";
 import EditAppointment from "./pages/EditAppointment";
 
 
+// ==========================================================
+// BED PAGES
+// ==========================================================
+
+import BedList from "./pages/BedList";
+import AddBedForm from "./pages/AddBedForm";
+import EditBed from "./pages/EditBed";
+import BedDetails from "./pages/BedDetails";
+
+// ==========================================================
+// ADMISSION PAGES
+// ==========================================================
+import Admissions from "./pages/Admissions";
+import AddAdmissionForm from "./pages/AddAdmissionForm";
+import AdmissionDetails from "./pages/AdmissionDetails";
+
+
+// ==========================================================
+// APP COMPONENT
+// ==========================================================
+
 function App() {
-  return (
-    <div className = "min-h-screen bg-slate-100 flex items-center justify-center">
 
-      <div className = "bg-white p-10 rounded-x1 shadow-x1"> </div>
+    return (
 
-      
-    <BrowserRouter>
+        <BrowserRouter>
 
-        <Routes>
+            <Routes>
 
-            {/* Login Page */}
-            <Route path="/" element={<Login />} />
 
-            {/* Register Page */}
-            <Route path="/register" element={<Register />} />
+                {/* ==========================================================
+                    LOGIN
+                ========================================================== */}
 
-            {/* Dashboard */}
-            <Route path="/dashboard" element={<Dashboard />} />
+                <Route
+                    path="/"
+                    element={<Login />}
+                />
 
-            {/* Patients */}
-            <Route path="/Patients" element={<Patients />} />
 
-            <Route path="/patients/:id" element={<PatientDetails />} />
+                {/* ==========================================================
+                    REGISTER
+                ========================================================== */}
 
-            <Route path="/patients/:id/edit" element={<EditPatient />} />
+                <Route
+                    path="/register"
+                    element={<Register />}
+                />
 
-            {/* Doctors */}
-            <Route path="/Doctors"element={<Doctors />} />
 
-            <Route path="/doctors/:id" element={<DoctorDetails />} />
+                {/* ==========================================================
+                    DASHBOARD
+                ========================================================== */}
 
-            <Route path="/doctors/:id/edit" element={<EditDoctor />} />
+                <Route
+                    path="/dashboard"
+                    element={<Dashboard />}
+                />
 
-            {/* Appointments */}
-            <Route path="/appointments" element={<Appointments />} />    
 
-            <Route path="/appointments/:id" element={<AppointmentDetails />} />
+                {/* ==========================================================
+                    PATIENTS
+                ========================================================== */}
 
-            <Route path="/appointments/:id/edit" element={<EditAppointment />} />     
-        
-        </Routes>
+                <Route
+                    path="/patients"
+                    element={<Patients />}
+                />
 
-    </BrowserRouter>
 
-    </div>
+                <Route
+                    path="/patients/:id"
+                    element={<PatientDetails />}
+                />
 
-    
-  );
+
+                <Route
+                    path="/patients/:id/edit"
+                    element={<EditPatient />}
+                />
+
+
+                {/* ==========================================================
+                    DOCTORS
+                ========================================================== */}
+
+                <Route
+                    path="/doctors"
+                    element={<Doctors />}
+                />
+
+
+                <Route
+                    path="/doctors/:id"
+                    element={<DoctorDetails />}
+                />
+
+
+                <Route
+                    path="/doctors/:id/edit"
+                    element={<EditDoctor />}
+                />
+
+
+                {/* ==========================================================
+                    APPOINTMENTS
+                ========================================================== */}
+
+                <Route
+                    path="/appointments"
+                    element={<Appointments />}
+                />
+
+
+                <Route
+                    path="/appointments/:id"
+                    element={<AppointmentDetails />}
+                />
+
+
+                <Route
+                    path="/appointments/:id/edit"
+                    element={<EditAppointment />}
+                />
+
+
+                {/* ==========================================================
+                    BEDS
+                ========================================================== */}
+
+                <Route
+                    path="/beds"
+                    element={<BedList />}
+                />
+
+
+                <Route
+                    path="/beds/add"
+                    element={<AddBedForm />}
+                />
+
+
+                <Route
+                    path="/beds/edit/:id"
+                    element={<EditBed />}
+                />
+
+
+                <Route
+                    path="/beds/:id"
+                    element={<BedDetails />}
+                />
+
+
+                {/* ==========================================================
+                    ADMISSIONS
+                ========================================================== */}
+                <Route
+                    path="/admissions"
+                    element={<Admissions />}
+                />
+
+                <Route
+                    path="/admissions/add"
+                    element={<AddAdmissionForm />}
+                />
+
+                <Route
+                    path="/admissions/:id"
+                    element={<AdmissionDetails />}
+                />
+
+
+            </Routes>
+
+        </BrowserRouter>
+
+    );
+
 }
 
-export default App
+
+// ==========================================================
+// EXPORT
+// ==========================================================
+
+export default App;

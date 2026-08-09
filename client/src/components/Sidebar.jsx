@@ -53,7 +53,23 @@ function Sidebar() {
                 </li>
 
                 <li className="cursor-pointer hover:text-blue-600">
-                    🛏 Beds
+                    
+                    <Link
+                        to="/beds"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                    >
+                        🛏 Beds
+                    </Link>
+                
+                </li>
+
+                <li className="cursor-pointer hover:text-blue-600">
+                    <Link
+                        to="/admissions"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                    >
+                        Admissions
+                    </Link>
                 </li>
 
                 <li className="cursor-pointer hover:text-blue-600">
