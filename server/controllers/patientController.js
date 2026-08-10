@@ -1,21 +1,22 @@
 // ==========================================================
-// DATABASE CONNECTION
+// PATIENT CONTROLLER
+// Handles all patient-related operations
 // ==========================================================
 
 const db = require("../config/db");
 
+
 // ==========================================================
 // ADD PATIENT
-// Saves a new patient into the database
 // ==========================================================
 
 const addPatient = async (req, res) => {
 
     try {
 
-        // ==========================================================
-        // GET DATA FROM REQUEST BODY
-        // ==========================================================
+        // ==================================================
+        // GET DATA FROM REQUEST
+        // ==================================================
 
         const {
 
@@ -34,15 +35,32 @@ const addPatient = async (req, res) => {
 
         } = req.body;
 
-        console.log(req.body);
 
-        // ==========================================================
-        // INSERT PATIENT INTO DATABASE
-        // ==========================================================
+        // ==================================================
+        // VALIDATION
+        // ==================================================
+
+        if (!patientName || !age || !gender) {
+
+            return res.status(400).json({
+
+                error:
+                    "Patient name, age and gender are required."
+
+            });
+
+        }
+
+
+        // ==================================================
+        // INSERT PATIENT
+        // ==================================================
 
         const result = await db.query(
+
             `
             INSERT INTO patients (
+
                 patient_name,
                 age,
                 gender,
@@ -55,144 +73,201 @@ const addPatient = async (req, res) => {
                 bed_number,
                 diagnosis,
                 admission_date
+
             )
+
             VALUES (
-                $1, $2, $3, $4, $5, $6,
-                $7, $8, $9, $10, $11, $12
+
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9,
+                $10,
+                $11,
+                $12
+
             )
+
             RETURNING *;
             `,
+
             [
+
                 patientName,
                 age,
                 gender,
-                bloodGroup,
-                phone,
-                address,
-                emergencyContact,
-                doctor,
-                ward,
-                bedNumber,
-                diagnosis,
-                admissionDate
+                bloodGroup || null,
+                phone || null,
+                address || null,
+                emergencyContact || null,
+                doctor || null,
+                ward || null,
+                bedNumber || null,
+                diagnosis || null,
+                admissionDate || null
+
             ]
+
         );
 
-        // ==========================================================
-        // SEND SUCCESS RESPONSE
-        // ==========================================================
 
-        res.status(201).json({
+        // ==================================================
+        // SUCCESS
+        // ==================================================
+
+        return res.status(201).json({
+
             message: "Patient added successfully",
+
             patient: result.rows[0]
+
         });
 
     }
 
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "[ADD PATIENT ERROR]:",
+            error
+        );
 
-        res.status(500).json({
-            error: "Internal Server Error"
+        return res.status(500).json({
+
+            error: "Failed to add patient."
+
         });
 
     }
 
 };
 
+
 // ==========================================================
 // GET ALL PATIENTS
-// Fetches all patients from the database
 // ==========================================================
 
 const getAllPatients = async (req, res) => {
 
     try {
 
-        // Fetch a;; Patients
         const result = await db.query(
-            `SELECT * 
-            FROM patients 
-            ORDER BY created_at DESC`
+
+            `
+            SELECT *
+            FROM patients
+            ORDER BY created_at DESC
+            `
+
         );
 
-        // Sends Patients to Frontend
-        res.status(200).json({
-            patients : result.rows
+
+        return res.status(200).json({
+
+            patients: result.rows
+
         });
 
-    } catch (error) {
-        console.error("Pateint Error :- ", error);
+    }
 
-        res.status(500).json({
-            error : "Failed to fetch Pateints!"
+    catch (error) {
+
+        console.error(
+            "[GET ALL PATIENTS ERROR]:",
+            error
+        );
+
+        return res.status(500).json({
+
+            error: "Failed to fetch patients."
+
         });
 
     }
 
 };
 
+
 // ==========================================================
 // GET PATIENT BY ID
-// Fetches one specific patient from the database
 // ==========================================================
 
 const getPatientById = async (req, res) => {
+
     try {
 
-        // Get Patient ID from URL
         const { id } = req.params;
 
-        // Find patient in database
+
         const result = await db.query(
-            `SELECT *
+
+            `
+            SELECT *
             FROM patients
-            WHERE id = $1`, [id]
+            WHERE id = $1
+            `,
+
+            [id]
+
         );
 
-        // Check if Patient exists.
-        if(result.rows.length === 0) {
+
+        // ==================================================
+        // NOT FOUND
+        // ==================================================
+
+        if (result.rows.length === 0) {
+
             return res.status(404).json({
-                error : "Patient not found"
+
+                error: "Patient not found."
+
             });
 
         }
 
-        // Send patient data.
-        res.status(200).json({
-            patient : result.rows[0]
+
+        return res.status(200).json({
+
+            patient: result.rows[0]
+
         });
 
-    } catch(error) {
-        console.error("[Patient Error] :- ", error);
-
-        res.status(500).json({
-            error : "Failed to fetch The Patient!"
-        });
     }
+
+    catch (error) {
+
+        console.error(
+            "[GET PATIENT ERROR]:",
+            error
+        );
+
+        return res.status(500).json({
+
+            error: "Failed to fetch patient."
+
+        });
+
+    }
+
 };
+
 
 // ==========================================================
 // UPDATE PATIENT
-// Updates an existing patient's information
 // ==========================================================
 
 const updatePatient = async (req, res) => {
 
     try {
 
-        
-        // ==========================================================
-        // GET PATIENT ID FROM URL
-        // ==========================================================
-
         const { id } = req.params;
 
-
-        // ==========================================================
-        // GET UPDATED DATA FROM REQUEST BODY
-        // ==========================================================
 
         const {
 
@@ -212,14 +287,33 @@ const updatePatient = async (req, res) => {
         } = req.body;
 
 
-        // ==========================================================
-        // UPDATE PATIENT IN DATABASE
-        // ==========================================================
+        // ==================================================
+        // VALIDATION
+        // ==================================================
+
+        if (!patientName || !age || !gender) {
+
+            return res.status(400).json({
+
+                error:
+                    "Patient name, age and gender are required."
+
+            });
+
+        }
+
+
+        // ==================================================
+        // UPDATE
+        // ==================================================
 
         const result = await db.query(
+
             `
             UPDATE patients
+
             SET
+
                 patient_name = $1,
                 age = $2,
                 gender = $3,
@@ -232,45 +326,49 @@ const updatePatient = async (req, res) => {
                 bed_number = $10,
                 diagnosis = $11,
                 admission_date = $12
+
             WHERE id = $13
+
             RETURNING *;
             `,
+
             [
+
                 patientName,
                 age,
                 gender,
-                bloodGroup,
-                phone,
-                address,
-                emergencyContact,
-                doctor,
-                ward,
-                bedNumber,
-                diagnosis,
-                admissionDate,
+                bloodGroup || null,
+                phone || null,
+                address || null,
+                emergencyContact || null,
+                doctor || null,
+                ward || null,
+                bedNumber || null,
+                diagnosis || null,
+                admissionDate || null,
                 id
+
             ]
+
         );
 
 
-        // ==========================================================
-        // CHECK IF PATIENT EXISTS
-        // ==========================================================
+        // ==================================================
+        // NOT FOUND
+        // ==================================================
 
         if (result.rows.length === 0) {
 
             return res.status(404).json({
-                error: "Patient not found"
+
+                error: "Patient not found."
+
             });
 
         }
 
 
-        // ==========================================================
-        // SEND SUCCESS RESPONSE
-        // ==========================================================
-
-        res.status(200).json({
+        return res.status(200).json({
 
             message: "Patient updated successfully",
 
@@ -280,21 +378,16 @@ const updatePatient = async (req, res) => {
 
     }
 
-
-    // ==========================================================
-    // ERROR HANDLING
-    // ==========================================================
-
     catch (error) {
 
         console.error(
-            "[Patient Update Error]:",
+            "[UPDATE PATIENT ERROR]:",
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
 
-            error: "Failed to update patient"
+            error: "Failed to update patient."
 
         });
 
@@ -302,39 +395,53 @@ const updatePatient = async (req, res) => {
 
 };
 
+
 // ==========================================================
 // DELETE PATIENT
-// Deletes a patient from the database
 // ==========================================================
 
 const deletePatient = async (req, res) => {
 
     try {
 
-        // Get patient ID from URL
         const { id } = req.params;
 
-        // Delete patient
+
+        // ==================================================
+        // DELETE
+        // ==================================================
+
         const result = await db.query(
+
             `
             DELETE FROM patients
+
             WHERE id = $1
+
             RETURNING *;
             `,
+
             [id]
+
         );
 
-        // Check if patient exists
+
+        // ==================================================
+        // NOT FOUND
+        // ==================================================
+
         if (result.rows.length === 0) {
 
             return res.status(404).json({
-                error: "Patient not found"
+
+                error: "Patient not found."
+
             });
 
         }
 
-        // Send success response
-        res.status(200).json({
+
+        return res.status(200).json({
 
             message: "Patient deleted successfully",
 
@@ -342,16 +449,18 @@ const deletePatient = async (req, res) => {
 
         });
 
-    } catch (error) {
+    }
+
+    catch (error) {
 
         console.error(
-            "[Patient Delete Error]:",
+            "[DELETE PATIENT ERROR]:",
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
 
-            error: "Failed to delete patient"
+            error: "Failed to delete patient."
 
         });
 
@@ -359,12 +468,17 @@ const deletePatient = async (req, res) => {
 
 };
 
+
+// ==========================================================
+// EXPORT
+// ==========================================================
+
 module.exports = {
 
     addPatient,
     getAllPatients,
     getPatientById,
     updatePatient,
-    deletePatient,
+    deletePatient
 
 };

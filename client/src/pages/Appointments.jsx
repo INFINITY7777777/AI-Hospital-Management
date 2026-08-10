@@ -1,45 +1,30 @@
 import { useState } from "react";
 
 import AppointmentList from "../components/AppointmentList";
-import AddAppointmentForm from "../components/AddAppointmentFrom";
+import AddAppointmentForm from "../components/AddAppointmentForm";
 
 function Appointments() {
 
-        // ==========================================================
-        // REFRESH STATE
-        // Changes whenever a new appointment is created
-        // ==========================================================
-
-        const [refreshAppointments, setRefreshAppointments] = useState(0);
+    const [refreshAppointments, setRefreshAppointments] = useState(0);
 
 
-        // ==========================================================
-        // REFRESH APPOINTMENT LIST
-        // ==========================================================
+    const handleAppointmentCreated = () => {
 
-        const handleAppointmentCreated = () => {
+        setRefreshAppointments(
+            (previousValue) => previousValue + 1
+        );
 
-            setRefreshAppointments(
-                (previousValue) => previousValue + 1
-            );
+    };
 
-        };
+
     return (
 
         <div>
-
-            {/* ==========================================================
-                PAGE TITLE
-            ========================================================== */}
 
             <h1 className="text-3xl font-bold">
                 Appointment Management
             </h1>
 
-            
-            {/* ==========================================================
-                ADD APPOINTMENT FORM
-            ========================================================== */}
 
             <AddAppointmentForm
                 refreshAppointments={
@@ -47,9 +32,6 @@ function Appointments() {
                 }
             />
 
-            {/* ==========================================================
-                APPOINTMENT LIST
-            ========================================================== */}
 
             <AppointmentList
                 refreshAppointments={

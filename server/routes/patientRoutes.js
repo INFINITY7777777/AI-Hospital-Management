@@ -1,37 +1,143 @@
 // ==========================================================
 // PATIENT ROUTES
-// Handles all patient-related API endpoints
 // ==========================================================
 
 const express = require("express");
 
 const router = express.Router();
 
-// Import Patient Controller
+
+// ==========================================================
+// AUTH MIDDLEWARE
+// ==========================================================
+
 const {
+
+    verifyToken,
+    authorizeRoles
+
+} = require("../middleware/authMiddleware");
+
+
+// ==========================================================
+// PATIENT CONTROLLER
+// ==========================================================
+
+const {
+
     addPatient,
     getAllPatients,
     getPatientById,
     updatePatient,
-    deletePatient,
-    
+    deletePatient
 
 } = require("../controllers/patientController");
 
+
 // ==========================================================
-// ADD NEW PATIENT
-// POST /api/patients
+// CREATE PATIENT
 // ==========================================================
 
-router.post("/", addPatient);
+router.post(
 
-router.get("/", getAllPatients);
+    "/",
 
-router.get("/:id", getPatientById);
+    verifyToken,
 
-router.put("/:id", updatePatient);
+    authorizeRoles(
+        "admin",
+        "doctor",
+        "staff"
+    ),
 
-router.delete("/:id", deletePatient);
+    addPatient
 
+);
+
+
+// ==========================================================
+// GET ALL PATIENTS
+// ==========================================================
+
+router.get(
+
+    "/",
+
+    verifyToken,
+
+    authorizeRoles(
+        "admin",
+        "doctor",
+        "staff"
+    ),
+
+    getAllPatients
+
+);
+
+
+// ==========================================================
+// GET PATIENT BY ID
+// ==========================================================
+
+router.get(
+
+    "/:id",
+
+    verifyToken,
+
+    authorizeRoles(
+        "admin",
+        "doctor",
+        "staff"
+    ),
+
+    getPatientById
+
+);
+
+
+// ==========================================================
+// UPDATE PATIENT
+// ==========================================================
+
+router.put(
+
+    "/:id",
+
+    verifyToken,
+
+    authorizeRoles(
+        "admin",
+        "doctor",
+        "staff"
+    ),
+
+    updatePatient
+
+);
+
+
+// ==========================================================
+// DELETE PATIENT
+// ONLY ADMIN
+// ==========================================================
+
+router.delete(
+
+    "/:id",
+
+    verifyToken,
+
+    authorizeRoles("admin"),
+
+    deletePatient
+
+);
+
+
+// ==========================================================
+// EXPORT
+// ==========================================================
 
 module.exports = router;

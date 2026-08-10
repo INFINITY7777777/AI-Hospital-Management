@@ -4,24 +4,19 @@ import axios from "axios";
 function AddAppointmentForm({ refreshAppointments }) {
 
     // ==========================================================
-    // PATIENT STATE
-    // Stores all patients
+    // PATIENTS
     // ==========================================================
 
     const [patients, setPatients] = useState([]);
 
-
     // ==========================================================
-    // DOCTOR STATE
-    // Stores all doctors
+    // DOCTORS
     // ==========================================================
 
     const [doctors, setDoctors] = useState([]);
 
-
     // ==========================================================
-    // FORM STATE
-    // Stores appointment form data
+    // FORM DATA
     // ==========================================================
 
     const [appointmentData, setAppointmentData] = useState({
@@ -34,44 +29,63 @@ function AddAppointmentForm({ refreshAppointments }) {
 
     });
 
-
     // ==========================================================
-    // LOADING STATE
+    // LOADING
     // ==========================================================
 
     const [loading, setLoading] = useState(true);
 
-
     // ==========================================================
-    // SUBMITTING STATE
+    // SUBMITTING
     // ==========================================================
 
     const [submitting, setSubmitting] = useState(false);
 
-
     // ==========================================================
-    // ERROR STATE
+    // ERROR
     // ==========================================================
 
     const [error, setError] = useState("");
 
-
     // ==========================================================
-    // SUCCESS STATE
+    // SUCCESS
     // ==========================================================
 
     const [success, setSuccess] = useState("");
 
 
     // ==========================================================
-    // FETCH PATIENTS AND DOCTORS
+    // LOAD PATIENTS + DOCTORS
     // ==========================================================
 
     useEffect(() => {
 
         const loadData = async () => {
 
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+
+                setError("You are not logged in.");
+
+                setLoading(false);
+
+                return;
+
+            }
+
             try {
+
+                const config = {
+
+                    headers: {
+
+                        Authorization: `Bearer ${token}`
+
+                    }
+
+                };
+
 
                 const [
                     patientsResponse,
@@ -79,31 +93,25 @@ function AddAppointmentForm({ refreshAppointments }) {
                 ] = await Promise.all([
 
                     axios.get(
-                        "http://localhost:5000/api/patients"
+                        "http://localhost:5000/api/patients",
+                        config
                     ),
 
                     axios.get(
-                        "http://localhost:5000/api/doctors"
+                        "http://localhost:5000/api/doctors",
+                        config
                     )
 
                 ]);
 
 
-                // ==========================================================
-                // STORE PATIENTS
-                // ==========================================================
-
                 setPatients(
-                    patientsResponse.data.patients
+                    patientsResponse.data.patients || []
                 );
 
 
-                // ==========================================================
-                // STORE DOCTORS
-                // ==========================================================
-
                 setDoctors(
-                    doctorsResponse.data.doctors
+                    doctorsResponse.data.doctors || []
                 );
 
             } catch (error) {
@@ -114,7 +122,10 @@ function AddAppointmentForm({ refreshAppointments }) {
                 );
 
                 setError(
+
+                    error.response?.data?.error ||
                     "Failed to load patients or doctors."
+
                 );
 
             } finally {
@@ -131,7 +142,7 @@ function AddAppointmentForm({ refreshAppointments }) {
 
 
     // ==========================================================
-    // HANDLE INPUT CHANGE
+    // INPUT CHANGE
     // ==========================================================
 
     const handleChange = (event) => {
@@ -156,39 +167,42 @@ function AddAppointmentForm({ refreshAppointments }) {
 
 
     // ==========================================================
-    // HANDLE FORM SUBMIT
+    // SUBMIT
     // ==========================================================
 
     const handleSubmit = async (event) => {
 
         event.preventDefault();
 
-
-        // ==========================================================
-        // RESET MESSAGES
-        // ==========================================================
-
         setError("");
 
         setSuccess("");
 
-
-        // ==========================================================
-        // START SUBMITTING
-        // ==========================================================
-
         setSubmitting(true);
+
+
+        const token = localStorage.getItem("token");
+
+
+        if (!token) {
+
+            setError("You are not logged in.");
+
+            setSubmitting(false);
+
+            return;
+
+        }
 
 
         try {
 
-            // ==========================================================
-            // SEND APPOINTMENT TO BACKEND
-            // ==========================================================
-
             await axios.post(
+
                 "http://localhost:5000/api/appointments",
+
                 {
+
                     patientId: Number(
                         appointmentData.patientId
                     ),
@@ -205,12 +219,24 @@ function AddAppointmentForm({ refreshAppointments }) {
 
                     reason:
                         appointmentData.reason
+
+                },
+
+                {
+
+                    headers: {
+
+                        Authorization: `Bearer ${token}`
+
+                    }
+
                 }
+
             );
 
 
             // ==========================================================
-            // SUCCESS MESSAGE
+            // SUCCESS
             // ==========================================================
 
             setSuccess(
@@ -234,7 +260,7 @@ function AddAppointmentForm({ refreshAppointments }) {
 
 
             // ==========================================================
-            // REFRESH APPOINTMENT LIST
+            // REFRESH LIST
             // ==========================================================
 
             if (refreshAppointments) {
@@ -251,22 +277,21 @@ function AddAppointmentForm({ refreshAppointments }) {
             );
 
 
-            // ==========================================================
-            // ERROR MESSAGE
-            // ==========================================================
+            console.error(
+                "Backend response:",
+                error.response?.data
+            );
+
 
             setError(
 
                 error.response?.data?.error ||
+                error.response?.data?.message ||
                 "Failed to create appointment."
 
             );
 
         } finally {
-
-            // ==========================================================
-            // STOP SUBMITTING
-            // ==========================================================
 
             setSubmitting(false);
 
@@ -276,7 +301,7 @@ function AddAppointmentForm({ refreshAppointments }) {
 
 
     // ==========================================================
-    // LOADING SCREEN
+    // LOADING
     // ==========================================================
 
     if (loading) {
@@ -286,9 +311,7 @@ function AddAppointmentForm({ refreshAppointments }) {
             <div className="bg-white rounded-xl shadow p-6 mt-6">
 
                 <p className="text-gray-500">
-
                     Loading patients and doctors...
-
                 </p>
 
             </div>
@@ -298,23 +321,17 @@ function AddAppointmentForm({ refreshAppointments }) {
     }
 
 
-    // ==========================================================
-    // APPOINTMENT FORM
-    // ==========================================================
-
     return (
 
         <div className="bg-white rounded-xl shadow p-6 mt-6">
 
             <h2 className="text-2xl font-bold mb-6">
-
                 Create Appointment
-
             </h2>
 
 
             {/* ==========================================================
-                ERROR MESSAGE
+                ERROR
             ========================================================== */}
 
             {error && (
@@ -329,7 +346,7 @@ function AddAppointmentForm({ refreshAppointments }) {
 
 
             {/* ==========================================================
-                SUCCESS MESSAGE
+                SUCCESS
             ========================================================== */}
 
             {success && (
@@ -343,28 +360,18 @@ function AddAppointmentForm({ refreshAppointments }) {
             )}
 
 
-            {/* ==========================================================
-                FORM
-            ========================================================== */}
-
             <form onSubmit={handleSubmit}>
-
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
 
-                    {/* ==========================================================
-                        PATIENT
-                    ========================================================== */}
+                    {/* PATIENT */}
 
                     <div>
 
                         <label className="block mb-2 font-medium">
-
                             Select Patient
-
                         </label>
-
 
                         <select
                             name="patientId"
@@ -375,11 +382,8 @@ function AddAppointmentForm({ refreshAppointments }) {
                         >
 
                             <option value="">
-
                                 Select a patient
-
                             </option>
-
 
                             {patients.map((patient) => (
 
@@ -387,9 +391,7 @@ function AddAppointmentForm({ refreshAppointments }) {
                                     key={patient.id}
                                     value={patient.id}
                                 >
-
                                     {patient.patient_name}
-
                                 </option>
 
                             ))}
@@ -399,18 +401,13 @@ function AddAppointmentForm({ refreshAppointments }) {
                     </div>
 
 
-                    {/* ==========================================================
-                        DOCTOR
-                    ========================================================== */}
+                    {/* DOCTOR */}
 
                     <div>
 
                         <label className="block mb-2 font-medium">
-
                             Select Doctor
-
                         </label>
-
 
                         <select
                             name="doctorId"
@@ -421,11 +418,8 @@ function AddAppointmentForm({ refreshAppointments }) {
                         >
 
                             <option value="">
-
                                 Select a doctor
-
                             </option>
-
 
                             {doctors.map((doctor) => (
 
@@ -450,25 +444,18 @@ function AddAppointmentForm({ refreshAppointments }) {
                     </div>
 
 
-                    {/* ==========================================================
-                        APPOINTMENT DATE
-                    ========================================================== */}
+                    {/* DATE */}
 
                     <div>
 
                         <label className="block mb-2 font-medium">
-
                             Appointment Date
-
                         </label>
-
 
                         <input
                             type="date"
                             name="appointmentDate"
-                            value={
-                                appointmentData.appointmentDate
-                            }
+                            value={appointmentData.appointmentDate}
                             onChange={handleChange}
                             required
                             className="w-full border rounded-lg p-3"
@@ -477,25 +464,18 @@ function AddAppointmentForm({ refreshAppointments }) {
                     </div>
 
 
-                    {/* ==========================================================
-                        APPOINTMENT TIME
-                    ========================================================== */}
+                    {/* TIME */}
 
                     <div>
 
                         <label className="block mb-2 font-medium">
-
                             Appointment Time
-
                         </label>
-
 
                         <input
                             type="time"
                             name="appointmentTime"
-                            value={
-                                appointmentData.appointmentTime
-                            }
+                            value={appointmentData.appointmentTime}
                             onChange={handleChange}
                             required
                             className="w-full border rounded-lg p-3"
@@ -504,18 +484,13 @@ function AddAppointmentForm({ refreshAppointments }) {
                     </div>
 
 
-                    {/* ==========================================================
-                        REASON
-                    ========================================================== */}
+                    {/* REASON */}
 
                     <div className="md:col-span-2">
 
                         <label className="block mb-2 font-medium">
-
                             Reason for Appointment
-
                         </label>
-
 
                         <textarea
                             name="reason"
@@ -531,9 +506,7 @@ function AddAppointmentForm({ refreshAppointments }) {
                 </div>
 
 
-                {/* ==========================================================
-                    SUBMIT BUTTON
-                ========================================================== */}
+                {/* BUTTON */}
 
                 <button
                     type="submit"

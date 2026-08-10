@@ -139,6 +139,16 @@ const loginUser = async (req, res) => {
             });
         }
 
+        console.log("========== LOGIN DEBUG ==========");
+
+        console.log("User ID:", user.id);
+
+        console.log("User Email:", user.email);
+
+        console.log("User Role:", user.role);
+
+        console.log("=================================");
+
         // Create JWT
         const token = jwt.sign(
             {

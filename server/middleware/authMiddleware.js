@@ -1,108 +1,138 @@
-/***********************************************************************
- * File Name : authMiddleware.js
- * Purpose   : Protect routes using JWT Authentication
- * Author    : Shashank (AI-Powered Hospital Management System)
- *
- * Description:
- * This middleware checks whether the user is logged in by verifying
- * the JWT token sent in the request header.
- *
- * If the token is valid:
- *      ✔ Allow access to the requested API
- *
- * If the token is invalid or missing:
- *      ✘ Block the request
- ***********************************************************************/
+// ==========================================================
+// JWT AUTHENTICATION MIDDLEWARE
+// ==========================================================
 
-// ========================= IMPORT REQUIRED LIBRARY =========================
-
-// JWT is used to verify login tokens
 const jwt = require("jsonwebtoken");
 
 
-// ========================= JWT AUTHENTICATION MIDDLEWARE =========================
+// ==========================================================
+// VERIFY JWT TOKEN
+// ==========================================================
 
 const verifyToken = (req, res, next) => {
 
-    // ------------------------------------------------------------------
-    // STEP 1 : Read the Authorization Header
-    //
-    // Example Header:
-    // Authorization : Bearer eyJhbGciOiJIUzI1NiIs...
-    // ------------------------------------------------------------------
-
-    const authHeader = req.headers.authorization;
-
-
-    // ------------------------------------------------------------------
-    // STEP 2 : Check whether token exists
-    // ------------------------------------------------------------------
-
-    if (!authHeader) {
-
-        return res.status(401).json({
-            success: false,
-            message: "Access Denied! No token was provided."
-        });
-
-    }
-
-
-    // ------------------------------------------------------------------
-    // STEP 3 : Extract only the JWT Token
-    //
-    // Header Value:
-    // Bearer eyJhbGciOiJIUzI1NiIs...
-    //
-    // We only need:
-    // eyJhbGciOiJIUzI1NiIs...
-    // ------------------------------------------------------------------
-
-    const token = authHeader.split(" ")[1];
-
-
-    // ------------------------------------------------------------------
-    // STEP 4 : Verify JWT Token
-    // ------------------------------------------------------------------
-
     try {
 
+        // ======================================================
+        // GET AUTHORIZATION HEADER
+        // ======================================================
+
+        const authHeader = req.headers.authorization;
+
+
+        if (!authHeader) {
+
+            return res.status(401).json({
+
+                error: "Access denied. Authentication token is required."
+
+            });
+
+        }
+
+
+        // ======================================================
+        // CHECK BEARER FORMAT
+        // ======================================================
+
+        if (!authHeader.startsWith("Bearer ")) {
+
+            return res.status(401).json({
+
+                error: "Invalid authorization format."
+
+            });
+
+        }
+
+
+        // ======================================================
+        // EXTRACT TOKEN
+        // ======================================================
+
+        const token = authHeader.split(" ")[1];
+
+
+        if (!token) {
+
+            return res.status(401).json({
+
+                error: "Authentication token is missing."
+
+            });
+
+        }
+
+
+        // ======================================================
+        // VERIFY TOKEN
+        // ======================================================
+
         const decoded = jwt.verify(
+
             token,
+
             process.env.JWT_SECRET
+
         );
 
 
-        // --------------------------------------------------------------
-        // STEP 5 : Save Logged-in User Information
-        //
-        // Example:
-        // req.user.id
-        // req.user.role
-        //
-        // Any protected API can use this information.
-        // --------------------------------------------------------------
+        // ======================================================
+        // NORMALIZE ROLE
+        // ======================================================
 
-        req.user = decoded;
+        const normalizedRole = decoded.role
+            ? decoded.role.toLowerCase().trim()
+            : "";
 
 
-        // --------------------------------------------------------------
-        // STEP 6 : Allow the request to continue
-        // --------------------------------------------------------------
+        // ======================================================
+        // STORE USER INFORMATION
+        // ======================================================
+
+        req.user = {
+
+            id: decoded.id,
+
+            role: normalizedRole
+
+        };
+
+
+        // ======================================================
+        // DEBUG
+        // ======================================================
+
+        console.log(
+            "[AUTH CHECK] User:",
+            req.user.id,
+            "| Role:",
+            req.user.role
+        );
+
+
+        // ======================================================
+        // CONTINUE
+        // ======================================================
 
         next();
 
-    } catch (error) {
+    }
 
-        // --------------------------------------------------------------
-        // JWT is Invalid / Expired
-        // --------------------------------------------------------------
+    catch (error) {
+
+        console.error(
+
+            "[AUTH ERROR]:",
+
+            error.message
+
+        );
+
 
         return res.status(401).json({
 
-            success: false,
-
-            message: "Invalid or Expired Token."
+            error: "Invalid or expired authentication token."
 
         });
 
@@ -111,8 +141,91 @@ const verifyToken = (req, res, next) => {
 };
 
 
-// ========================= EXPORT MIDDLEWARE =========================
+// ==========================================================
+// ROLE AUTHORIZATION
+// ==========================================================
 
-// This makes the middleware available to other files.
+const authorizeRoles = (...allowedRoles) => {
 
-module.exports = verifyToken;
+    return (req, res, next) => {
+
+        // ======================================================
+        // CHECK AUTHENTICATION
+        // ======================================================
+
+        if (!req.user) {
+
+            return res.status(401).json({
+
+                error: "Authentication required."
+
+            });
+
+        }
+
+
+        // ======================================================
+        // NORMALIZE ALLOWED ROLES
+        // ======================================================
+
+        const normalizedAllowedRoles = allowedRoles.map(
+
+            (role) => role.toLowerCase().trim()
+
+        );
+
+
+        // ======================================================
+        // DEBUG
+        // ======================================================
+
+        console.log(
+
+            "[ROLE CHECK]",
+            "User:",
+            req.user.id,
+            "| Role:",
+            req.user.role,
+            "| Allowed:",
+            normalizedAllowedRoles
+
+        );
+
+
+        // ======================================================
+        // CHECK ROLE
+        // ======================================================
+
+        if (!normalizedAllowedRoles.includes(req.user.role)) {
+
+            return res.status(403).json({
+
+                error: "You do not have permission to perform this action."
+
+            });
+
+        }
+
+
+        // ======================================================
+        // ROLE ACCEPTED
+        // ======================================================
+
+        next();
+
+    };
+
+};
+
+
+// ==========================================================
+// EXPORT
+// ==========================================================
+
+module.exports = {
+
+    verifyToken,
+
+    authorizeRoles
+
+};

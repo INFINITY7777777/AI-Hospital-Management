@@ -5,9 +5,8 @@
 
 import { useState } from "react";
 
-import AddDoctorForm from "../components/AddDoctorFrom.jsx";
+import AddDoctorForm from "../components/AddDoctorForm.jsx";
 import DoctorList from "../components/DoctorList.jsx";
-
 
 function Doctors() {
 
@@ -18,7 +17,6 @@ function Doctors() {
 
     const [refreshDoctors, setRefreshDoctors] = useState(0);
 
-
     // ==========================================================
     // REFRESH DOCTOR LIST
     // This function is passed to AddDoctorForm
@@ -26,36 +24,39 @@ function Doctors() {
 
     const handleDoctorAdded = () => {
 
-        setRefreshDoctors((previousValue) => previousValue + 1);
+        setRefreshDoctors(
+            (previousValue) => previousValue + 1
+        );
 
     };
 
+    // ==========================================================
+    // PAGE
+    // ==========================================================
 
     return (
 
         <div>
 
-            {/* ==========================================================
+            {/* ==================================================
                 PAGE TITLE
-            ========================================================== */}
+            ================================================== */}
 
             <h1 className="text-3xl font-bold">
                 Doctor Management
             </h1>
 
-
-            {/* ==========================================================
+            {/* ==================================================
                 ADD DOCTOR FORM
-            ========================================================== */}
+            ================================================== */}
 
             <AddDoctorForm
                 refreshDoctors={handleDoctorAdded}
             />
 
-
-            {/* ==========================================================
+            {/* ==================================================
                 DOCTOR LIST
-            ========================================================== */}
+            ================================================== */}
 
             <DoctorList
                 refreshDoctors={refreshDoctors}
@@ -66,6 +67,5 @@ function Doctors() {
     );
 
 }
-
 
 export default Doctors;

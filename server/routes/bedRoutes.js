@@ -1,20 +1,14 @@
-// ==========================================================
-// EXPRESS
-// ==========================================================
-
 const express = require("express");
-
-
-// ==========================================================
-// CREATE ROUTER
-// ==========================================================
 
 const router = express.Router();
 
+const {
 
-// ==========================================================
-// IMPORT BED CONTROLLERS
-// ==========================================================
+    verifyToken,
+
+    authorizeRoles
+
+} = require("../middleware/authMiddleware");
 
 const {
 
@@ -30,20 +24,22 @@ const {
 
     assignBed,
 
-    releaseBed,
-    
+    releaseBed
 
 } = require("../controllers/bedController");
 
 
 // ==========================================================
-// ADD BED
-// POST /api/beds
+// BED CRUD
 // ==========================================================
 
 router.post(
 
     "/",
+
+    verifyToken,
+
+    authorizeRoles("admin"),
 
     addBed
 
@@ -59,6 +55,18 @@ router.get(
 
     "/",
 
+    verifyToken,
+
+    authorizeRoles(
+
+        "admin",
+
+        "doctor",
+
+        "staff"
+
+    ),
+
     getAllBeds
 
 );
@@ -72,6 +80,18 @@ router.get(
 router.get(
 
     "/:id",
+
+    verifyToken,
+
+    authorizeRoles(
+
+        "admin",
+
+        "doctor",
+
+        "staff"
+
+    ),
 
     getBedById
 
@@ -87,6 +107,10 @@ router.put(
 
     "/:id",
 
+    verifyToken,
+
+    authorizeRoles("admin"),
+
     updateBed
 
 );
@@ -101,19 +125,34 @@ router.delete(
 
     "/:id",
 
+    verifyToken,
+
+    authorizeRoles("admin"),
+
     deleteBed
 
 );
 
 
 // ==========================================================
-// ASSIGN BED TO PATIENT
-// PUT /api/beds/:id/assign
+// ASSIGN BED
 // ==========================================================
 
 router.put(
 
     "/:id/assign",
+
+    verifyToken,
+
+    authorizeRoles(
+
+        "admin",
+
+        "doctor",
+
+        "staff"
+
+    ),
 
     assignBed
 
@@ -122,20 +161,27 @@ router.put(
 
 // ==========================================================
 // RELEASE BED
-// PUT /api/beds/:id/release
 // ==========================================================
 
 router.put(
 
     "/:id/release",
 
+    verifyToken,
+
+    authorizeRoles(
+
+        "admin",
+
+        "doctor",
+
+        "staff"
+
+    ),
+
     releaseBed
 
 );
 
-
-// ==========================================================
-// EXPORT ROUTER
-// ==========================================================
 
 module.exports = router;

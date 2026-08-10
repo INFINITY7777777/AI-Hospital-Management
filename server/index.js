@@ -44,8 +44,14 @@ const bedRoutes = require("./routes/bedRoutes");
 // Admission Routes
 const admissionRoutes = require("./routes/admissionRoutes");
 
+// Clinical Notes Routes
+const clinicalNoteRoutes = require("./routes/clinicalNoteRoutes");
+
 // JWT Authentication Middleware
-const verifyToken = require("./middleware/authMiddleware");
+const {
+    verifyToken,
+    authorizeRoles
+} = require("./middleware/authMiddleware");
 
 
 
@@ -90,6 +96,9 @@ app.use("/api/beds", bedRoutes);
 
 // Admission APIs
 app.use("/api/admissions", admissionRoutes);
+
+// Clinical Notes APIs
+app.use("/api/clinical-notes", clinicalNoteRoutes);
 
 
 // ========================= TEST ROUTE =========================

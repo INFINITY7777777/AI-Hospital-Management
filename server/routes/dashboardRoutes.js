@@ -1,45 +1,108 @@
+// ==========================================================
+// EXPRESS
+// ==========================================================
+
 const express = require("express");
 
 const router = express.Router();
 
 
 // ==========================================================
-// IMPORT CONTROLLER
+// AUTH MIDDLEWARE
 // ==========================================================
 
 const {
+
+    verifyToken,
+
+    authorizeRoles
+
+} = require("../middleware/authMiddleware");
+
+
+// ==========================================================
+// DASHBOARD CONTROLLER
+// ==========================================================
+
+const {
+
     getDashboardStats,
+
     getTodayAppointments,
-    getUpcomingAppointments,
 
-
+    getUpcomingAppointments
 
 } = require("../controllers/dashboardController");
 
 
 // ==========================================================
-// GET DASHBOARD STATISTICS
-// GET /api/dashboard/stats
+// ALLOWED DASHBOARD ROLES
 // ==========================================================
 
-router.get("/stats", getDashboardStats);
+const dashboardRoles = [
+
+    "admin",
+
+    "doctor",
+
+    "staff"
+
+];
+
 
 // ==========================================================
-// GET TODAY'S APPOINTMENTS
-// GET /api/dashboard/today-appointments
+// DASHBOARD STATISTICS
 // ==========================================================
 
-router.get("/today-appointments", getTodayAppointments);
+router.get(
+
+    "/stats",
+
+    verifyToken,
+
+    authorizeRoles(...dashboardRoles),
+
+    getDashboardStats
+
+);
+
 
 // ==========================================================
-// GET UPCOMING APPOINTMENTS
-// GET /api/dashboard/upcoming-appointments
+// TODAY'S APPOINTMENTS
 // ==========================================================
 
-router.get("/upcoming-appointments", getUpcomingAppointments);
+router.get(
+
+    "/today-appointments",
+
+    verifyToken,
+
+    authorizeRoles(...dashboardRoles),
+
+    getTodayAppointments
+
+);
+
 
 // ==========================================================
-// EXPORT ROUTER
+// UPCOMING APPOINTMENTS
+// ==========================================================
+
+router.get(
+
+    "/upcoming-appointments",
+
+    verifyToken,
+
+    authorizeRoles(...dashboardRoles),
+
+    getUpcomingAppointments
+
+);
+
+
+// ==========================================================
+// EXPORT
 // ==========================================================
 
 module.exports = router;

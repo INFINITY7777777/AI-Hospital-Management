@@ -43,7 +43,7 @@ function EditAppointment() {
         appointmentDate: "",
         appointmentTime: "",
         reason: "",
-        status: ""
+        status: "Scheduled"
 
     });
 
@@ -70,7 +70,7 @@ function EditAppointment() {
 
 
     // ==========================================================
-    // FETCH APPOINTMENT, PATIENTS AND DOCTORS
+    // LOAD APPOINTMENT + PATIENTS + DOCTORS
     // ==========================================================
 
     useEffect(() => {
@@ -79,6 +79,49 @@ function EditAppointment() {
 
             try {
 
+                setLoading(true);
+                setError("");
+
+
+                // ==================================================
+                // GET JWT TOKEN
+                // ==================================================
+
+                const token = localStorage.getItem("token");
+
+
+                // ==================================================
+                // CHECK LOGIN
+                // ==================================================
+
+                if (!token) {
+
+                    navigate("/");
+
+                    return;
+
+                }
+
+
+                // ==================================================
+                // AUTHORIZATION HEADER
+                // ==================================================
+
+                const config = {
+
+                    headers: {
+
+                        Authorization: `Bearer ${token}`
+
+                    }
+
+                };
+
+
+                // ==================================================
+                // FETCH ALL REQUIRED DATA
+                // ==================================================
+
                 const [
                     appointmentResponse,
                     patientsResponse,
@@ -86,63 +129,85 @@ function EditAppointment() {
                 ] = await Promise.all([
 
                     axios.get(
-                        `http://localhost:5000/api/appointments/${id}`
+                        `http://localhost:5000/api/appointments/${id}`,
+                        config
                     ),
 
                     axios.get(
-                        "http://localhost:5000/api/patients"
+                        "http://localhost:5000/api/patients",
+                        config
                     ),
 
                     axios.get(
-                        "http://localhost:5000/api/doctors"
+                        "http://localhost:5000/api/doctors",
+                        config
                     )
 
                 ]);
 
 
-                // ==========================================================
+                // ==================================================
                 // GET APPOINTMENT
-                // ==========================================================
+                // ==================================================
 
                 const appointment =
                     appointmentResponse.data.appointment;
 
 
-                // ==========================================================
+                // ==================================================
+                // CHECK APPOINTMENT
+                // ==================================================
+
+                if (!appointment) {
+
+                    setError("Appointment not found.");
+
+                    return;
+
+                }
+
+
+                // ==================================================
                 // STORE PATIENTS
-                // ==========================================================
+                // ==================================================
 
                 setPatients(
-                    patientsResponse.data.patients
+
+                    patientsResponse.data.patients || []
+
                 );
 
 
-                // ==========================================================
+                // ==================================================
                 // STORE DOCTORS
-                // ==========================================================
+                // ==================================================
 
                 setDoctors(
-                    doctorsResponse.data.doctors
+
+                    doctorsResponse.data.doctors || []
+
                 );
 
 
-                // ==========================================================
-                // SET FORM DATA
-                // ==========================================================
+                // ==================================================
+                // SET EXISTING APPOINTMENT DATA
+                // ==================================================
 
                 setFormData({
 
                     patientId:
-                        appointment.patient_id,
+                        appointment.patient_id || "",
 
                     doctorId:
-                        appointment.doctor_id,
+                        appointment.doctor_id || "",
 
                     appointmentDate:
-                        appointment.appointment_date,
+                        appointment.appointment_date || "",
 
                     appointmentTime:
-                        appointment.appointment_time,
+                        appointment.appointment_time
+                            ? appointment.appointment_time.substring(0, 5)
+                            : "",
 
                     reason:
                         appointment.reason || "",
@@ -160,10 +225,45 @@ function EditAppointment() {
                 );
 
 
+                // ==================================================
+                // UNAUTHORIZED
+                // ==================================================
+
+                if (error.response?.status === 401) {
+
+                    localStorage.removeItem("token");
+
+                    navigate("/");
+
+                    return;
+
+                }
+
+
+                // ==================================================
+                // FORBIDDEN
+                // ==================================================
+
+                if (error.response?.status === 403) {
+
+                    setError(
+                        "You do not have permission to edit this appointment."
+                    );
+
+                    return;
+
+                }
+
+
+                // ==================================================
+                // GENERAL ERROR
+                // ==================================================
+
                 setError(
 
                     error.response?.data?.error ||
-                    "Failed to load appointment"
+                    error.response?.data?.message ||
+                    "Failed to load appointment."
 
                 );
 
@@ -178,7 +278,7 @@ function EditAppointment() {
 
         loadData();
 
-    }, [id]);
+    }, [id, navigate]);
 
 
     // ==========================================================
@@ -193,15 +293,13 @@ function EditAppointment() {
         } = event.target;
 
 
-        setFormData(
-            (previousData) => ({
+        setFormData((previousData) => ({
 
-                ...previousData,
+            ...previousData,
 
-                [name]: value
+            [name]: value
 
-            })
-        );
+        }));
 
     };
 
@@ -215,12 +313,41 @@ function EditAppointment() {
         event.preventDefault();
 
 
+        // ==========================================================
+        // RESET ERROR
+        // ==========================================================
+
         setError("");
+
+
+        // ==========================================================
+        // START SUBMITTING
+        // ==========================================================
 
         setSubmitting(true);
 
 
         try {
+
+            // ==========================================================
+            // GET JWT TOKEN
+            // ==========================================================
+
+            const token = localStorage.getItem("token");
+
+
+            // ==========================================================
+            // CHECK LOGIN
+            // ==========================================================
+
+            if (!token) {
+
+                navigate("/");
+
+                return;
+
+            }
+
 
             // ==========================================================
             // UPDATE APPOINTMENT
@@ -250,13 +377,33 @@ function EditAppointment() {
                     status:
                         formData.status
 
+                },
+
+                {
+
+                    headers: {
+
+                        Authorization:
+                            `Bearer ${token}`
+
+                    }
+
                 }
 
             );
 
 
             // ==========================================================
-            // GO BACK TO APPOINTMENT DETAILS
+            // SUCCESS
+            // ==========================================================
+
+            alert(
+                "Appointment updated successfully!"
+            );
+
+
+            // ==========================================================
+            // GO BACK TO DETAILS
             // ==========================================================
 
             navigate(
@@ -266,24 +413,63 @@ function EditAppointment() {
         } catch (error) {
 
             console.error(
-                "FULL UPDATE ERROR:",
+                "Error updating appointment:",
                 error
             );
 
+
             console.error(
-                "BACKEND RESPONSE:",
+                "Backend response:",
                 error.response?.data
             );
 
+
             console.error(
-                "STATUS:",
+                "Status:",
                 error.response?.status
             );
 
+
+            // ==========================================================
+            // UNAUTHORIZED
+            // ==========================================================
+
+            if (error.response?.status === 401) {
+
+                localStorage.removeItem("token");
+
+                navigate("/");
+
+                return;
+
+            }
+
+
+            // ==========================================================
+            // FORBIDDEN
+            // ==========================================================
+
+            if (error.response?.status === 403) {
+
+                setError(
+                    "You do not have permission to update this appointment."
+                );
+
+                return;
+
+            }
+
+
+            // ==========================================================
+            // GENERAL ERROR
+            // ==========================================================
+
             setError(
+
                 error.response?.data?.error ||
                 error.response?.data?.message ||
-                "Failed to update appointment"
+                "Failed to update appointment."
+
             );
 
         } finally {
@@ -328,7 +514,7 @@ function EditAppointment() {
 
             <div className="p-6">
 
-                <div className="bg-red-100 text-red-700 p-4 rounded-lg">
+                <div className="bg-red-100 border border-red-200 text-red-700 p-4 rounded-lg">
 
                     {error}
 
@@ -336,10 +522,13 @@ function EditAppointment() {
 
 
                 <button
+
                     onClick={() =>
                         navigate(`/appointments/${id}`)
                     }
-                    className="mt-4 px-5 py-2 bg-gray-200 rounded-lg"
+
+                    className="mt-4 px-5 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+
                 >
 
                     Back to Appointment
@@ -361,7 +550,6 @@ function EditAppointment() {
 
         <div className="p-6">
 
-
             {/* ==========================================================
                 PAGE TITLE
             ========================================================== */}
@@ -379,16 +567,14 @@ function EditAppointment() {
 
             <div className="bg-white rounded-xl shadow p-6">
 
-
                 <form onSubmit={handleSubmit}>
-
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
 
-                        {/* ==========================================================
+                        {/* ==================================================
                             PATIENT
-                        ========================================================== */}
+                        ================================================== */}
 
                         <div>
 
@@ -400,11 +586,17 @@ function EditAppointment() {
 
 
                             <select
+
                                 name="patientId"
+
                                 value={formData.patientId}
+
                                 onChange={handleChange}
+
                                 required
-                                className="w-full border rounded-lg p-3"
+
+                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                             >
 
                                 <option value="">
@@ -432,9 +624,9 @@ function EditAppointment() {
                         </div>
 
 
-                        {/* ==========================================================
+                        {/* ==================================================
                             DOCTOR
-                        ========================================================== */}
+                        ================================================== */}
 
                         <div>
 
@@ -446,11 +638,17 @@ function EditAppointment() {
 
 
                             <select
+
                                 name="doctorId"
+
                                 value={formData.doctorId}
+
                                 onChange={handleChange}
+
                                 required
-                                className="w-full border rounded-lg p-3"
+
+                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                             >
 
                                 <option value="">
@@ -483,9 +681,9 @@ function EditAppointment() {
                         </div>
 
 
-                        {/* ==========================================================
+                        {/* ==================================================
                             DATE
-                        ========================================================== */}
+                        ================================================== */}
 
                         <div>
 
@@ -497,22 +695,29 @@ function EditAppointment() {
 
 
                             <input
+
                                 type="date"
+
                                 name="appointmentDate"
+
                                 value={
                                     formData.appointmentDate
                                 }
+
                                 onChange={handleChange}
+
                                 required
-                                className="w-full border rounded-lg p-3"
+
+                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                             />
 
                         </div>
 
 
-                        {/* ==========================================================
+                        {/* ==================================================
                             TIME
-                        ========================================================== */}
+                        ================================================== */}
 
                         <div>
 
@@ -524,22 +729,29 @@ function EditAppointment() {
 
 
                             <input
+
                                 type="time"
+
                                 name="appointmentTime"
+
                                 value={
                                     formData.appointmentTime
                                 }
+
                                 onChange={handleChange}
+
                                 required
-                                className="w-full border rounded-lg p-3"
+
+                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                             />
 
                         </div>
 
 
-                        {/* ==========================================================
+                        {/* ==================================================
                             STATUS
-                        ========================================================== */}
+                        ================================================== */}
 
                         <div>
 
@@ -551,11 +763,17 @@ function EditAppointment() {
 
 
                             <select
+
                                 name="status"
+
                                 value={formData.status}
+
                                 onChange={handleChange}
+
                                 required
-                                className="w-full border rounded-lg p-3"
+
+                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                             >
 
                                 <option value="Scheduled">
@@ -579,9 +797,9 @@ function EditAppointment() {
                         </div>
 
 
-                        {/* ==========================================================
+                        {/* ==================================================
                             REASON
-                        ========================================================== */}
+                        ================================================== */}
 
                         <div className="md:col-span-2">
 
@@ -593,11 +811,19 @@ function EditAppointment() {
 
 
                             <textarea
+
                                 name="reason"
+
                                 value={formData.reason}
+
                                 onChange={handleChange}
+
                                 rows="4"
-                                className="w-full border rounded-lg p-3"
+
+                                placeholder="Enter reason for appointment"
+
+                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                             />
 
                         </div>
@@ -605,19 +831,23 @@ function EditAppointment() {
                     </div>
 
 
-                    {/* ==========================================================
+                    {/* ==================================================
                         BUTTONS
-                    ========================================================== */}
+                    ================================================== */}
 
-                    <div className="flex gap-4 mt-6">
+                    <div className="flex gap-4 mt-8">
 
 
-                        {/* UPDATE BUTTON */}
+                        {/* UPDATE */}
 
                         <button
+
                             type="submit"
+
                             disabled={submitting}
+
                             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+
                         >
 
                             {submitting
@@ -628,16 +858,18 @@ function EditAppointment() {
                         </button>
 
 
-                        {/* CANCEL BUTTON */}
+                        {/* CANCEL */}
 
                         <button
+
                             type="button"
+
                             onClick={() =>
-                                navigate(
-                                    `/appointments/${id}`
-                                )
+                                navigate(`/appointments/${id}`)
                             }
+
                             className="px-6 py-3 bg-gray-200 rounded-lg hover:bg-gray-300"
+
                         >
 
                             Cancel

@@ -1,9 +1,13 @@
 // ==========================================================
+// DOCTOR CONTROLLER
+// Handles all doctor-related database operations
+// ==========================================================
+
+// ==========================================================
 // DATABASE CONNECTION
 // ==========================================================
 
 const db = require("../config/db");
-
 
 // ==========================================================
 // ADD DOCTOR
@@ -14,32 +18,36 @@ const addDoctor = async (req, res) => {
 
     try {
 
-        // ==========================================================
+        // ======================================================
         // GET DATA FROM REQUEST BODY
-        // ==========================================================
+        // ======================================================
 
         const {
-
             doctorName,
             specialization,
             phone,
             email,
             department,
             experience
-
         } = req.body;
 
+        console.log("[ADD DOCTOR]:", req.body);
 
-        // ==========================================================
-        // DISPLAY RECEIVED DATA
-        // ==========================================================
+        // ======================================================
+        // VALIDATION
+        // ======================================================
 
-        console.log(req.body);
+        if (!doctorName || !specialization) {
 
+            return res.status(400).json({
+                error: "Doctor name and specialization are required."
+            });
 
-        // ==========================================================
-        // INSERT DOCTOR INTO DATABASE
-        // ==========================================================
+        }
+
+        // ======================================================
+        // INSERT DOCTOR
+        // ======================================================
 
         const result = await db.query(
             `
@@ -52,24 +60,28 @@ const addDoctor = async (req, res) => {
                 experience
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6
             )
             RETURNING *;
             `,
             [
                 doctorName,
                 specialization,
-                phone,
-                email,
-                department,
-                experience
+                phone || null,
+                email || null,
+                department || null,
+                experience || null
             ]
         );
 
-
-        // ==========================================================
-        // SEND SUCCESS RESPONSE
-        // ==========================================================
+        // ======================================================
+        // SUCCESS RESPONSE
+        // ======================================================
 
         res.status(201).json({
 
@@ -79,17 +91,10 @@ const addDoctor = async (req, res) => {
 
         });
 
-    }
-
-
-    // ==========================================================
-    // ERROR HANDLING
-    // ==========================================================
-
-    catch (error) {
+    } catch (error) {
 
         console.error(
-            "[Doctor Error]:",
+            "[Doctor Add Error]:",
             error
         );
 
@@ -105,16 +110,11 @@ const addDoctor = async (req, res) => {
 
 // ==========================================================
 // GET ALL DOCTORS
-// Fetches all doctors from the database
 // ==========================================================
 
 const getAllDoctors = async (req, res) => {
 
     try {
-
-        // ==========================================================
-        // FETCH ALL DOCTORS
-        // ==========================================================
 
         const result = await db.query(
             `
@@ -124,28 +124,16 @@ const getAllDoctors = async (req, res) => {
             `
         );
 
-
-        // ==========================================================
-        // SEND DOCTORS TO FRONTEND
-        // ==========================================================
-
         res.status(200).json({
 
             doctors: result.rows
 
         });
 
-    }
-
-
-    // ==========================================================
-    // ERROR HANDLING
-    // ==========================================================
-
-    catch (error) {
+    } catch (error) {
 
         console.error(
-            "[Doctor Error]:",
+            "[Doctor Fetch Error]:",
             error
         );
 
@@ -161,23 +149,21 @@ const getAllDoctors = async (req, res) => {
 
 // ==========================================================
 // GET DOCTOR BY ID
-// Fetches one specific doctor from the database
 // ==========================================================
 
 const getDoctorById = async (req, res) => {
 
     try {
 
-        // ==========================================================
-        // GET DOCTOR ID FROM URL
-        // ==========================================================
+        // ======================================================
+        // GET ID FROM URL
+        // ======================================================
 
         const { id } = req.params;
 
-
-        // ==========================================================
-        // FIND DOCTOR IN DATABASE
-        // ==========================================================
+        // ======================================================
+        // FIND DOCTOR
+        // ======================================================
 
         const result = await db.query(
             `
@@ -188,10 +174,9 @@ const getDoctorById = async (req, res) => {
             [id]
         );
 
-
-        // ==========================================================
+        // ======================================================
         // CHECK IF DOCTOR EXISTS
-        // ==========================================================
+        // ======================================================
 
         if (result.rows.length === 0) {
 
@@ -203,10 +188,9 @@ const getDoctorById = async (req, res) => {
 
         }
 
-
-        // ==========================================================
-        // SEND DOCTOR DATA
-        // ==========================================================
+        // ======================================================
+        // SUCCESS RESPONSE
+        // ======================================================
 
         res.status(200).json({
 
@@ -214,161 +198,152 @@ const getDoctorById = async (req, res) => {
 
         });
 
+    } catch (error) {
+
+        console.error(
+            "[Doctor Fetch Error]:",
+            error
+        );
+
+        res.status(500).json({
+
+            error: "Failed to fetch doctor"
+
+        });
+
     }
 
+};
 
-        // ==========================================================
-        // ERROR HANDLING
-        // ==========================================================
+// ==========================================================
+// UPDATE DOCTOR
+// ==========================================================
 
-        catch (error) {
+const updateDoctor = async (req, res) => {
 
-            console.error(
-                "[Doctor Error]:",
-                error
-            );
+    try {
 
-            res.status(500).json({
+        // ======================================================
+        // GET DOCTOR ID
+        // ======================================================
 
-                error: "Failed to fetch doctor"
+        const { id } = req.params;
+
+        // ======================================================
+        // GET UPDATED DATA
+        // ======================================================
+
+        const {
+            doctorName,
+            specialization,
+            phone,
+            email,
+            department,
+            experience
+        } = req.body;
+
+        // ======================================================
+        // VALIDATION
+        // ======================================================
+
+        if (!doctorName || !specialization) {
+
+            return res.status(400).json({
+
+                error: "Doctor name and specialization are required."
 
             });
 
         }
 
-    };
+        // ======================================================
+        // UPDATE DOCTOR
+        // ======================================================
 
-    // ==========================================================
-    // UPDATE DOCTOR
-    // Updates an existing doctor's information
-    // ==========================================================
-
-    const updateDoctor = async (req, res) => {
-
-        try {
-
-            // ==========================================================
-            // GET DOCTOR ID FROM URL
-            // ==========================================================
-
-            const { id } = req.params;
-
-
-            // ==========================================================
-            // GET UPDATED DATA FROM REQUEST BODY
-            // ==========================================================
-
-            const {
-
+        const result = await db.query(
+            `
+            UPDATE doctors
+            SET
+                doctor_name = $1,
+                specialization = $2,
+                phone = $3,
+                email = $4,
+                department = $5,
+                experience = $6
+            WHERE id = $7
+            RETURNING *;
+            `,
+            [
                 doctorName,
                 specialization,
-                phone,
-                email,
-                department,
-                experience
+                phone || null,
+                email || null,
+                department || null,
+                experience || null,
+                id
+            ]
+        );
 
-            } = req.body;
+        // ======================================================
+        // CHECK IF DOCTOR EXISTS
+        // ======================================================
 
+        if (result.rows.length === 0) {
 
-            // ==========================================================
-            // UPDATE DOCTOR IN DATABASE
-            // ==========================================================
+            return res.status(404).json({
 
-            const result = await db.query(
-                `
-                UPDATE doctors
-                SET
-                    doctor_name = $1,
-                    specialization = $2,
-                    phone = $3,
-                    email = $4,
-                    department = $5,
-                    experience = $6
-                WHERE id = $7
-                RETURNING *;
-                `,
-                [
-                    doctorName,
-                    specialization,
-                    phone,
-                    email,
-                    department,
-                    experience,
-                    id
-                ]
-            );
-
-
-            // ==========================================================
-            // CHECK IF DOCTOR EXISTS
-            // ==========================================================
-
-            if (result.rows.length === 0) {
-
-                return res.status(404).json({
-
-                    error: "Doctor not found"
-
-                });
-
-            }
-
-
-            // ==========================================================
-            // SEND UPDATED DOCTOR
-            // ==========================================================
-
-            res.status(200).json({
-
-                message: "Doctor updated successfully",
-
-                doctor: result.rows[0]
+                error: "Doctor not found"
 
             });
 
         }
 
+        // ======================================================
+        // SUCCESS RESPONSE
+        // ======================================================
 
-        // ==========================================================
-        // ERROR HANDLING
-        // ==========================================================
+        res.status(200).json({
 
-        catch (error) {
+            message: "Doctor updated successfully",
 
-            console.error(
-                "[Doctor Update Error]:",
-                error
-            );
+            doctor: result.rows[0]
 
-            res.status(500).json({
+        });
 
-                error: "Failed to update doctor"
+    } catch (error) {
 
-            });
+        console.error(
+            "[Doctor Update Error]:",
+            error
+        );
 
-        }
+        res.status(500).json({
 
-    };
+            error: "Failed to update doctor"
 
-    // ==========================================================
+        });
+
+    }
+
+};
+
+// ==========================================================
 // DELETE DOCTOR
-// Deletes an existing doctor from the database
 // ==========================================================
 
 const deleteDoctor = async (req, res) => {
 
     try {
 
-        // ==========================================================
-        // GET DOCTOR ID FROM URL
-        // ==========================================================
+        // ======================================================
+        // GET DOCTOR ID
+        // ======================================================
 
         const { id } = req.params;
 
-
-        // ==========================================================
-        // DELETE DOCTOR FROM DATABASE
-        // ==========================================================
+        // ======================================================
+        // DELETE DOCTOR
+        // ======================================================
 
         const result = await db.query(
             `
@@ -379,10 +354,9 @@ const deleteDoctor = async (req, res) => {
             [id]
         );
 
-
-        // ==========================================================
+        // ======================================================
         // CHECK IF DOCTOR EXISTS
-        // ==========================================================
+        // ======================================================
 
         if (result.rows.length === 0) {
 
@@ -394,10 +368,9 @@ const deleteDoctor = async (req, res) => {
 
         }
 
-
-        // ==========================================================
-        // SEND SUCCESS RESPONSE
-        // ==========================================================
+        // ======================================================
+        // SUCCESS RESPONSE
+        // ======================================================
 
         res.status(200).json({
 
@@ -407,14 +380,7 @@ const deleteDoctor = async (req, res) => {
 
         });
 
-    }
-
-
-    // ==========================================================
-    // ERROR HANDLING
-    // ==========================================================
-
-    catch (error) {
+    } catch (error) {
 
         console.error(
             "[Doctor Delete Error]:",
@@ -431,9 +397,8 @@ const deleteDoctor = async (req, res) => {
 
 };
 
-
 // ==========================================================
-// EXPORT CONTROLLER
+// EXPORT CONTROLLERS
 // ==========================================================
 
 module.exports = {
@@ -442,10 +407,6 @@ module.exports = {
     getAllDoctors,
     getDoctorById,
     updateDoctor,
-    deleteDoctor,
-    
-    
-
-
+    deleteDoctor
 
 };

@@ -1,63 +1,163 @@
+// ==========================================================
+// APPOINTMENT ROUTES
+// ==========================================================
+
 const express = require("express");
 
 const router = express.Router();
 
 
 // ==========================================================
-// IMPORT CONTROLLER
+// AUTH
 // ==========================================================
 
 const {
-    addAppointment,
-    getAllAppointments,
-    getAppointmentById,
-    updateAppointment,
-    deleteAppointment,
 
+    verifyToken,
+
+    authorizeRoles
+
+} = require("../middleware/authMiddleware");
+
+
+// ==========================================================
+// CONTROLLER
+// ==========================================================
+
+const {
+
+    addAppointment,
+
+    getAllAppointments,
+
+    getAppointmentById,
+
+    updateAppointment,
+
+    deleteAppointment
 
 } = require("../controllers/appointmentController");
 
 
+// ==========================================================
+// CREATE
+// ==========================================================
+
+router.post(
+
+    "/",
+
+    verifyToken,
+
+    authorizeRoles(
+
+        "admin",
+
+        "doctor",
+
+        "staff"
+
+    ),
+
+    addAppointment
+
+);
 
 
 // ==========================================================
-// ADD APPOINTMENT
-// POST /api/appointments
+// GET ALL
 // ==========================================================
 
-router.post("/", addAppointment);
+router.get(
 
-// ==========================================================
-// GET ALL APPOINTMENTS
-// GET /api/appointments
-// ==========================================================
+    "/",
 
-router.get("/", getAllAppointments);
+    verifyToken,
 
-// ==========================================================
-// GET APPOINTMENT BY ID
-// GET /api/appointments/:id
-// ==========================================================
+    authorizeRoles(
 
-router.get("/:id", getAppointmentById);
+        "admin",
 
-// ==========================================================
-// UPDATE APPOINTMENT
-// PUT /api/appointments/:id
-// ==========================================================
+        "doctor",
 
-router.put("/:id", updateAppointment);
+        "staff"
 
-// ==========================================================
-// DELETE APPOINTMENT
-// DELETE /api/appointments/:id
-// ==========================================================
+    ),
 
-router.delete("/:id", deleteAppointment);
+    getAllAppointments
+
+);
 
 
 // ==========================================================
-// EXPORT ROUTER
+// GET BY ID
+// ==========================================================
+
+router.get(
+
+    "/:id",
+
+    verifyToken,
+
+    authorizeRoles(
+
+        "admin",
+
+        "doctor",
+
+        "staff"
+
+    ),
+
+    getAppointmentById
+
+);
+
+
+// ==========================================================
+// UPDATE
+// ==========================================================
+
+router.put(
+
+    "/:id",
+
+    verifyToken,
+
+    authorizeRoles(
+
+        "admin",
+
+        "doctor",
+
+        "staff"
+
+    ),
+
+    updateAppointment
+
+);
+
+
+// ==========================================================
+// DELETE
+// ==========================================================
+
+router.delete(
+
+    "/:id",
+
+    verifyToken,
+
+    authorizeRoles("admin"),
+
+    deleteAppointment
+
+);
+
+
+// ==========================================================
+// EXPORT
 // ==========================================================
 
 module.exports = router;

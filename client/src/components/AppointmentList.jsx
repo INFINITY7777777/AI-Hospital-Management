@@ -6,40 +6,59 @@ function AppointmentList({ refreshAppointments }) {
 
     const navigate = useNavigate();
 
-    // ==========================================================
-    // APPOINTMENT STATE
-    // Stores all appointments
-    // ==========================================================
-
     const [appointments, setAppointments] = useState([]);
-
-
-    // ==========================================================
-    // LOADING STATE
-    // ==========================================================
-
     const [loading, setLoading] = useState(true);
-
-    
-
-
-    // ==========================================================
-    // FETCH APPOINTMENTS
-    // ==========================================================
+    const [error, setError] = useState("");
 
     useEffect(() => {
 
+        let isMounted = true;
+
         const loadAppointments = async () => {
+
+            const token = localStorage.getItem("token");
+
+            // ==========================================================
+            // CHECK LOGIN
+            // ==========================================================
+
+            if (!token) {
+
+                navigate("/");
+
+                return;
+
+            }
 
             try {
 
+                if (isMounted) {
+
+                    setLoading(true);
+                    setError("");
+
+                }
+
+                // ==========================================================
+                // FETCH APPOINTMENTS
+                // ==========================================================
+
                 const response = await axios.get(
-                    "http://localhost:5000/api/appointments"
+                    "http://localhost:5000/api/appointments",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
                 );
 
-                setAppointments(
-                    response.data.appointments
-                );
+                if (isMounted) {
+
+                    setAppointments(
+                        response.data.appointments || []
+                    );
+
+                }
 
             } catch (error) {
 
@@ -48,9 +67,40 @@ function AppointmentList({ refreshAppointments }) {
                     error
                 );
 
+                // ==========================================================
+                // UNAUTHORIZED
+                // ==========================================================
+
+                if (error.response?.status === 401) {
+
+                    localStorage.removeItem("token");
+
+                    navigate("/");
+
+                    return;
+
+                }
+
+                // ==========================================================
+                // GENERAL ERROR
+                // ==========================================================
+
+                if (isMounted) {
+
+                    setError(
+                        error.response?.data?.error ||
+                        "Failed to load appointments."
+                    );
+
+                }
+
             } finally {
 
-                setLoading(false);
+                if (isMounted) {
+
+                    setLoading(false);
+
+                }
 
             }
 
@@ -58,22 +108,38 @@ function AppointmentList({ refreshAppointments }) {
 
         loadAppointments();
 
-    }, [refreshAppointments]);
+        return () => {
+
+            isMounted = false;
+
+        };
+
+    }, [refreshAppointments, navigate]);
 
 
     // ==========================================================
-    // LOADING SCREEN
+    // LOADING
     // ==========================================================
 
     if (loading) {
 
         return (
 
-            <div className="p-6">
+            <div className="bg-white rounded-xl shadow p-6 mt-6">
 
-                <p className="text-gray-500">
-                    Loading appointments...
-                </p>
+                <h2 className="text-2xl font-bold mb-6">
+                    Appointment List
+                </h2>
+
+                <div className="space-y-3">
+
+                    <div className="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
+
+                    <div className="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
+
+                    <div className="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
+
+                </div>
 
             </div>
 
@@ -82,28 +148,77 @@ function AppointmentList({ refreshAppointments }) {
     }
 
 
-    // ==========================================================
-    // APPOINTMENT LIST
-    // ==========================================================
-
     return (
 
         <div className="bg-white rounded-xl shadow p-6 mt-6">
 
-            <h2 className="text-2xl font-bold mb-6">
-                Appointment List
-            </h2>
+            {/* ==========================================================
+                HEADER
+            ========================================================== */}
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+
+                <div>
+
+                    <h2 className="text-2xl font-bold text-gray-900">
+                        Appointment List
+                    </h2>
+
+                    <p className="text-sm text-gray-500 mt-1">
+                        View and manage patient appointments
+                    </p>
+
+                </div>
+
+                <div className="text-sm text-gray-500">
+
+                    Total Appointments:{" "}
+
+                    <span className="font-semibold text-gray-900">
+                        {appointments.length}
+                    </span>
+
+                </div>
+
+            </div>
 
 
             {/* ==========================================================
-                NO APPOINTMENTS
+                ERROR
+            ========================================================== */}
+
+            {error && (
+
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+
+                    {error}
+
+                </div>
+
+            )}
+
+
+            {/* ==========================================================
+                EMPTY STATE
             ========================================================== */}
 
             {appointments.length === 0 ? (
 
-                <p className="text-gray-500">
-                    No appointments found.
-                </p>
+                <div className="text-center py-12">
+
+                    <div className="text-5xl mb-4">
+                        📅
+                    </div>
+
+                    <h3 className="text-lg font-semibold text-gray-900">
+                        No appointments found
+                    </h3>
+
+                    <p className="text-gray-500 mt-1">
+                        Create an appointment to see it listed here.
+                    </p>
+
+                </div>
 
             ) : (
 
@@ -113,33 +228,33 @@ function AppointmentList({ refreshAppointments }) {
 
                         <thead>
 
-                            <tr className="border-b">
+                            <tr className="border-b bg-gray-50">
 
-                                <th className="text-left p-3">
+                                <th className="text-left p-3 font-semibold text-gray-600">
                                     Patient
                                 </th>
 
-                                <th className="text-left p-3">
+                                <th className="text-left p-3 font-semibold text-gray-600">
                                     Doctor
                                 </th>
 
-                                <th className="text-left p-3">
+                                <th className="text-left p-3 font-semibold text-gray-600">
                                     Specialization
                                 </th>
 
-                                <th className="text-left p-3">
+                                <th className="text-left p-3 font-semibold text-gray-600">
                                     Date
                                 </th>
 
-                                <th className="text-left p-3">
+                                <th className="text-left p-3 font-semibold text-gray-600">
                                     Time
                                 </th>
 
-                                <th className="text-left p-3">
+                                <th className="text-left p-3 font-semibold text-gray-600">
                                     Reason
                                 </th>
 
-                                <th className="text-left p-3">
+                                <th className="text-left p-3 font-semibold text-gray-600">
                                     Status
                                 </th>
 
@@ -155,57 +270,43 @@ function AppointmentList({ refreshAppointments }) {
                                 <tr
                                     key={appointment.id}
                                     onClick={() =>
-                                        navigate(`/appointments/${appointment.id}`)
+                                        navigate(
+                                            `/appointments/${appointment.id}`
+                                        )
                                     }
                                     className="border-b hover:bg-gray-50 cursor-pointer"
                                 >
 
-                                    {/* PATIENT */}
-
                                     <td className="p-3">
-                                        {appointment.patient_name}
+                                        {appointment.patient_name || "—"}
                                     </td>
 
-
-                                    {/* DOCTOR */}
-
                                     <td className="p-3">
-                                        {appointment.doctor_name}
+                                        {appointment.doctor_name || "—"}
                                     </td>
 
-
-                                    {/* SPECIALIZATION */}
-
                                     <td className="p-3">
-                                        {appointment.specialization}
+                                        {appointment.specialization || "—"}
                                     </td>
 
-
-                                    {/* DATE */}
-
                                     <td className="p-3">
-                                        {appointment.appointment_date}
+                                        {appointment.appointment_date || "—"}
                                     </td>
 
-
-                                    {/* TIME */}
-
                                     <td className="p-3">
-                                        {appointment.appointment_time}
+                                        {appointment.appointment_time || "—"}
                                     </td>
-
-
-                                    {/* REASON */}
 
                                     <td className="p-3">
                                         {appointment.reason || "N/A"}
                                     </td>
 
-
-                                    {/* STATUS */}
-
                                     <td className="p-3">
-                                        {appointment.status}
+
+                                        <span className="font-medium">
+                                            {appointment.status || "Scheduled"}
+                                        </span>
+
                                     </td>
 
                                 </tr>
