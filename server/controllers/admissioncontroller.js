@@ -11,7 +11,19 @@ const pool = require("../config/db");
 // POST /api/admissions
 // ==========================================================
 
+// ==========================================================
+// CREATE ADMISSION
+// POST /api/admissions
+// Creates admission and assigns bed safely in one transaction
+// ==========================================================
+
 const addAdmission = async (req, res) => {
+
+    // ==========================================================
+    // START DATABASE CLIENT
+    // ==========================================================
+
+    const client = await pool.connect();
 
     try {
 
@@ -31,9 +43,7 @@ const addAdmission = async (req, res) => {
         if (!patientId) {
 
             return res.status(400).json({
-
                 error: "Patient is required"
-
             });
 
         }
@@ -42,23 +52,32 @@ const addAdmission = async (req, res) => {
         if (!admissionDate) {
 
             return res.status(400).json({
-
                 error: "Admission date is required"
-
             });
 
         }
 
 
         // ==========================================================
+        // START TRANSACTION
+        // ==========================================================
+
+        await client.query("BEGIN");
+
+
+        // ==========================================================
         // CHECK PATIENT
         // ==========================================================
 
-        const patientResult = await pool.query(
+        const patientResult = await client.query(
 
-            `SELECT id, patient_name
-             FROM patients
-             WHERE id = $1`,
+            `
+            SELECT
+                id,
+                patient_name
+            FROM patients
+            WHERE id = $1
+            `,
 
             [patientId]
 
@@ -67,9 +86,44 @@ const addAdmission = async (req, res) => {
 
         if (patientResult.rows.length === 0) {
 
-            return res.status(404).json({
+            await client.query("ROLLBACK");
 
+            return res.status(404).json({
                 error: "Patient not found"
+            });
+
+        }
+
+
+        // ==========================================================
+        // CHECK FOR EXISTING ACTIVE ADMISSION
+        // ==========================================================
+
+        const activeAdmissionResult = await client.query(
+
+            `
+            SELECT
+                id,
+                bed_id
+            FROM admissions
+            WHERE patient_id = $1
+            AND status = 'Admitted'
+            LIMIT 1
+            `,
+
+            [patientId]
+
+        );
+
+
+        if (activeAdmissionResult.rows.length > 0) {
+
+            await client.query("ROLLBACK");
+
+            return res.status(400).json({
+
+                error:
+                    "Patient already has an active admission"
 
             });
 
@@ -82,18 +136,31 @@ const addAdmission = async (req, res) => {
 
         if (bedId) {
 
-            const bedResult = await pool.query(
+            const bedResult = await client.query(
 
-                `SELECT id, bed_number, status
-                 FROM beds
-                 WHERE id = $1`,
+                `
+                SELECT
+                    id,
+                    bed_number,
+                    status,
+                    patient_id
+                FROM beds
+                WHERE id = $1
+                FOR UPDATE
+                `,
 
                 [bedId]
 
             );
 
 
+            // ======================================================
+            // BED NOT FOUND
+            // ======================================================
+
             if (bedResult.rows.length === 0) {
+
+                await client.query("ROLLBACK");
 
                 return res.status(404).json({
 
@@ -104,11 +171,39 @@ const addAdmission = async (req, res) => {
             }
 
 
-            if (bedResult.rows[0].status !== "Available") {
+            const bed = bedResult.rows[0];
+
+
+            // ======================================================
+            // BED NOT AVAILABLE
+            // ======================================================
+
+            if (bed.status !== "Available") {
+
+                await client.query("ROLLBACK");
 
                 return res.status(400).json({
 
-                    error: "Selected bed is not available"
+                    error:
+                        "Selected bed is not available"
+
+                });
+
+            }
+
+
+            // ======================================================
+            // SAFETY CHECK
+            // ======================================================
+
+            if (bed.patient_id !== null) {
+
+                await client.query("ROLLBACK");
+
+                return res.status(400).json({
+
+                    error:
+                        "Selected bed is already assigned to a patient"
 
                 });
 
@@ -121,9 +216,10 @@ const addAdmission = async (req, res) => {
         // CREATE ADMISSION
         // ==========================================================
 
-        const result = await pool.query(
+        const admissionResult = await client.query(
 
-            `INSERT INTO admissions
+            `
+            INSERT INTO admissions
             (
                 patient_id,
                 bed_id,
@@ -132,37 +228,63 @@ const addAdmission = async (req, res) => {
                 diagnosis,
                 status
             )
-            VALUES ($1, $2, $3, $4, $5, 'Admitted')
-            RETURNING *`,
+
+            VALUES
+            (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                'Admitted'
+            )
+
+            RETURNING *
+            `,
 
             [
+
                 patientId,
+
                 bedId || null,
+
                 admissionDate,
+
                 admissionReason || "",
+
                 diagnosis || ""
+
             ]
 
         );
 
 
         // ==========================================================
-        // ASSIGN BED IF PROVIDED
+        // ASSIGN BED
         // ==========================================================
 
         if (bedId) {
 
-            await pool.query(
+            await client.query(
 
-                `UPDATE beds
-                 SET
+                `
+                UPDATE beds
+
+                SET
+
                     status = 'Occupied',
+
                     patient_id = $1
-                 WHERE id = $2`,
+
+                WHERE id = $2
+                `,
 
                 [
+
                     patientId,
+
                     bedId
+
                 ]
 
             );
@@ -171,20 +293,53 @@ const addAdmission = async (req, res) => {
 
 
         // ==========================================================
-        // SUCCESS RESPONSE
+        // COMMIT TRANSACTION
+        // ==========================================================
+
+        await client.query("COMMIT");
+
+
+        // ==========================================================
+        // SUCCESS
         // ==========================================================
 
         return res.status(201).json({
 
-            message: "Patient admitted successfully",
+            message:
+                "Patient admitted successfully",
 
-            admission: result.rows[0]
+            admission:
+                admissionResult.rows[0]
 
         });
 
     }
 
     catch (error) {
+
+        // ==========================================================
+        // ROLLBACK
+        // ==========================================================
+
+        try {
+
+            await client.query("ROLLBACK");
+
+        }
+
+        catch (rollbackError) {
+
+            console.error(
+                "[Admission Rollback Error]:",
+                rollbackError
+            );
+
+        }
+
+
+        // ==========================================================
+        // LOG ERROR
+        // ==========================================================
 
         console.error(
 
@@ -195,11 +350,26 @@ const addAdmission = async (req, res) => {
         );
 
 
+        // ==========================================================
+        // SEND ERROR
+        // ==========================================================
+
         return res.status(500).json({
 
-            error: "Failed to create admission"
+            error:
+                "Failed to create admission"
 
         });
+
+    }
+
+    finally {
+
+        // ==========================================================
+        // RELEASE DATABASE CONNECTION
+        // ==========================================================
+
+        client.release();
 
     }
 
@@ -460,9 +630,16 @@ const updateAdmission = async (req, res) => {
 // ==========================================================
 // DISCHARGE PATIENT
 // PUT /api/admissions/:id/discharge
+// Discharges patient and releases bed safely in one transaction
 // ==========================================================
 
 const dischargePatient = async (req, res) => {
+
+    // ==========================================================
+    // GET DATABASE CLIENT
+    // ==========================================================
+
+    const client = await pool.connect();
 
     try {
 
@@ -475,21 +652,41 @@ const dischargePatient = async (req, res) => {
 
 
         // ==========================================================
+        // START TRANSACTION
+        // ==========================================================
+
+        await client.query("BEGIN");
+
+
+        // ==========================================================
         // FIND ADMISSION
         // ==========================================================
 
-        const admissionResult = await pool.query(
+        const admissionResult = await client.query(
 
-            `SELECT id, patient_id, bed_id, status
-             FROM admissions
-             WHERE id = $1`,
+            `
+            SELECT
+                id,
+                patient_id,
+                bed_id,
+                status
+            FROM admissions
+            WHERE id = $1
+            FOR UPDATE
+            `,
 
             [id]
 
         );
 
 
+        // ==========================================================
+        // ADMISSION NOT FOUND
+        // ==========================================================
+
         if (admissionResult.rows.length === 0) {
+
+            await client.query("ROLLBACK");
 
             return res.status(404).json({
 
@@ -509,6 +706,8 @@ const dischargePatient = async (req, res) => {
 
         if (admission.status === "Discharged") {
 
+            await client.query("ROLLBACK");
+
             return res.status(400).json({
 
                 error: "Patient is already discharged"
@@ -522,24 +721,35 @@ const dischargePatient = async (req, res) => {
         // UPDATE ADMISSION
         // ==========================================================
 
-        const result = await pool.query(
+        const result = await client.query(
 
-            `UPDATE admissions
+            `
+            UPDATE admissions
 
-             SET
+            SET
+
                 status = 'Discharged',
-                discharge_date = COALESCE($1, CURRENT_DATE),
+
+                discharge_date =
+                    COALESCE($1, CURRENT_DATE),
+
                 discharge_reason = $2,
+
                 updated_at = CURRENT_TIMESTAMP
 
-             WHERE id = $3
+            WHERE id = $3
 
-             RETURNING *`,
+            RETURNING *
+            `,
 
             [
+
                 dischargeDate || null,
+
                 dischargeReason || "",
+
                 id
+
             ]
 
         );
@@ -551,15 +761,19 @@ const dischargePatient = async (req, res) => {
 
         if (admission.bed_id) {
 
-            await pool.query(
+            await client.query(
 
-                `UPDATE beds
+                `
+                UPDATE beds
 
-                 SET
+                SET
+
                     status = 'Available',
+
                     patient_id = NULL
 
-                 WHERE id = $1`,
+                WHERE id = $1
+                `,
 
                 [admission.bed_id]
 
@@ -569,20 +783,56 @@ const dischargePatient = async (req, res) => {
 
 
         // ==========================================================
-        // SUCCESS
+        // COMMIT TRANSACTION
+        // ==========================================================
+
+        await client.query("COMMIT");
+
+
+        // ==========================================================
+        // SUCCESS RESPONSE
         // ==========================================================
 
         return res.status(200).json({
 
-            message: "Patient discharged successfully",
+            message:
+                "Patient discharged successfully",
 
-            admission: result.rows[0]
+            admission:
+                result.rows[0]
 
         });
 
     }
 
     catch (error) {
+
+        // ==========================================================
+        // ROLLBACK
+        // ==========================================================
+
+        try {
+
+            await client.query("ROLLBACK");
+
+        }
+
+        catch (rollbackError) {
+
+            console.error(
+
+                "[Discharge Rollback Error]:",
+
+                rollbackError
+
+            );
+
+        }
+
+
+        // ==========================================================
+        // LOG ERROR
+        // ==========================================================
 
         console.error(
 
@@ -593,11 +843,26 @@ const dischargePatient = async (req, res) => {
         );
 
 
+        // ==========================================================
+        // ERROR RESPONSE
+        // ==========================================================
+
         return res.status(500).json({
 
-            error: "Failed to discharge patient"
+            error:
+                "Failed to discharge patient"
 
         });
+
+    }
+
+    finally {
+
+        // ==========================================================
+        // RELEASE DATABASE CONNECTION
+        // ==========================================================
+
+        client.release();
 
     }
 

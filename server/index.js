@@ -47,6 +47,9 @@ const admissionRoutes = require("./routes/admissionRoutes");
 // Clinical Notes Routes
 const clinicalNoteRoutes = require("./routes/clinicalNoteRoutes");
 
+// Patient History Routes
+const patientHistoryRoutes = require("./routes/patientHistoryRoutes");
+
 // JWT Authentication Middleware
 const {
     verifyToken,
@@ -99,6 +102,10 @@ app.use("/api/admissions", admissionRoutes);
 
 // Clinical Notes APIs
 app.use("/api/clinical-notes", clinicalNoteRoutes);
+
+// Patient History APIs
+app.use("/api/patient-history", patientHistoryRoutes);
+
 
 
 // ========================= TEST ROUTE =========================

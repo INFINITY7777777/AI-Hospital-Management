@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 // AXIOS
 // ==========================================================
 
-import axios from "axios";
+import api from "../services/api";
 
 // ==========================================================
 // REACT ROUTER
@@ -115,8 +115,8 @@ function AddAdmissionForm() {
                 // FETCH PATIENTS
                 // ==================================================
 
-                const patientsResponse = await axios.get(
-                    "http://localhost:5000/api/patients"
+                const patientsResponse = await api.get(
+                    "/patients"
                 );
 
 
@@ -129,8 +129,8 @@ function AddAdmissionForm() {
                 // FETCH BEDS
                 // ==================================================
 
-                const bedsResponse = await axios.get(
-                    "http://localhost:5000/api/beds"
+                const bedsResponse = await api.get(
+                    "/beds"
                 );
 
 
@@ -245,12 +245,11 @@ function AddAdmissionForm() {
             // CREATE ADMISSION
             // ======================================================
 
-            await axios.post(
+            await api.post(
 
-                "http://localhost:5000/api/admissions",
+                "/admissions",
 
                 {
-
                     patientId: Number(formData.patientId),
 
                     bedId: formData.bedId
@@ -265,7 +264,6 @@ function AddAdmissionForm() {
 
                     diagnosis:
                         formData.diagnosis
-
                 }
 
             );
