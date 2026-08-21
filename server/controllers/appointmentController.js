@@ -287,117 +287,68 @@ const getAppointmentById = async (req, res) => {
 
 };
 
+
 // ==========================================================
 // UPDATE APPOINTMENT
-// Updates an existing appointment
+// Updates an existing appointment safely using COALESCE
 // ==========================================================
 
 const updateAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-    try {
+    const {
+      patientId,
+      doctorId,
+      appointmentDate,
+      appointmentTime,
+      reason,
+      status,
+    } = req.body;
 
-        // ==========================================================
-        // GET APPOINTMENT ID FROM URL
-        // ==========================================================
+    // COALESCE checks if the incoming variable is NULL/undefined; 
+    // if it is, it retains the existing database column value.
+    const result = await db.query(
+      `
+      UPDATE appointments
+      SET
+          patient_id = COALESCE($1, patient_id),
+          doctor_id = COALESCE($2, doctor_id),
+          appointment_date = COALESCE($3, appointment_date),
+          appointment_time = COALESCE($4, appointment_time),
+          reason = COALESCE($5, reason),
+          status = COALESCE($6, status)
+      WHERE id = $7
+      RETURNING *;
+      `,
+      [
+        patientId || null,
+        doctorId || null,
+        appointmentDate || null,
+        appointmentTime || null,
+        reason || null,
+        status || null,
+        id,
+      ]
+    );
 
-        const { id } = req.params;
-
-
-        // ==========================================================
-        // GET UPDATED DATA FROM REQUEST BODY
-        // ==========================================================
-
-        const {
-            patientId,
-            doctorId,
-            appointmentDate,
-            appointmentTime,
-            reason,
-            status
-        } = req.body;
-
-
-        // ==========================================================
-        // UPDATE APPOINTMENT
-        // ==========================================================
-
-        const result = await db.query(
-            `
-            UPDATE appointments
-
-            SET
-                patient_id = $1,
-                doctor_id = $2,
-                appointment_date = $3,
-                appointment_time = $4,
-                reason = $5,
-                status = $6
-
-            WHERE id = $7
-
-            RETURNING *;
-            `,
-            [
-                patientId,
-                doctorId,
-                appointmentDate,
-                appointmentTime,
-                reason,
-                status,
-                id
-            ]
-        );
-
-
-        // ==========================================================
-        // CHECK IF APPOINTMENT EXISTS
-        // ==========================================================
-
-        if (result.rows.length === 0) {
-
-            return res.status(404).json({
-
-                error: "Appointment not found"
-
-            });
-
-        }
-
-
-        // ==========================================================
-        // SEND SUCCESS RESPONSE
-        // ==========================================================
-
-        res.status(200).json({
-
-            message: "Appointment updated successfully",
-
-            appointment: result.rows[0]
-
-        });
-
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Appointment not found",
+      });
     }
 
+    res.status(200).json({
+      message: "Appointment updated successfully",
+      appointment: result.rows[0],
+    });
+  } catch (error) {
+    console.error("[Appointment Update Error]:", error);
 
-    // ==========================================================
-    // ERROR HANDLING
-    // ==========================================================
-
-    catch (error) {
-
-        console.error(
-            "[Appointment Update Error]:",
-            error
-        );
-
-        res.status(500).json({
-
-            error: "Failed to update appointment"
-
-        });
-
-    }
-
+    res.status(500).json({
+      error: "Failed to update appointment",
+    });
+  }
 };
 
 // ==========================================================

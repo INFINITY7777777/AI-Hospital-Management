@@ -75,6 +75,10 @@ import AddAdmissionForm from "./pages/AddAdmissionForm";
 import AdmissionDetails from "./pages/AdmissionDetails";
 import EditAdmission from "./pages/EditAdmission";
 
+// ==========================================================
+// NOTIFICATION PAGE
+// ==========================================================
+import Notifications from "./pages/Notifications";
 
 // ==========================================================
 // APP COMPONENT
@@ -234,6 +238,15 @@ function App() {
                 <Route
                     path="/admissions/:id/edit"
                     element={<EditAdmission />}
+                />
+
+                {/* ==========================================================
+                    NOTIFICATIONS
+                ========================================================== */}
+
+                <Route
+                    path="/notifications"
+                    element={<Notifications />}
                 />
 
             </Routes>

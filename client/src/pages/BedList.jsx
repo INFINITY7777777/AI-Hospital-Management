@@ -1,16 +1,8 @@
 // ==========================================================
-// REACT HOOKS
+// BED LIST
 // ==========================================================
 
 import { useEffect, useState } from "react";
-
-
-// ==========================================================
-// AXIOS
-// ==========================================================
-
-import axios from "axios";
-
 
 // ==========================================================
 // REACT ROUTER
@@ -18,13 +10,20 @@ import axios from "axios";
 
 import { useNavigate } from "react-router-dom";
 
+// ==========================================================
+// AXIOS API CLIENT
+// IMPORTANT:
+// This uses your api.js Axios instance so that the JWT
+// interceptor automatically attaches the token.
+// ==========================================================
+
+import api from "../services/api";
 
 // ==========================================================
 // NAVBAR
 // ==========================================================
 
 import Navbar from "../components/Navbar";
-
 
 // ==========================================================
 // SIDEBAR
@@ -47,52 +46,60 @@ function BedList() {
 
 
     // ==========================================================
-    // BEDS STATE
+    // BEDS
     // ==========================================================
 
     const [beds, setBeds] = useState([]);
 
 
     // ==========================================================
-    // PATIENTS STATE
-    // Used for assigning patients to beds
+    // PATIENTS
     // ==========================================================
 
     const [patients, setPatients] = useState([]);
 
 
     // ==========================================================
-    // LOADING STATE
+    // LOADING
     // ==========================================================
 
     const [loading, setLoading] = useState(true);
 
 
     // ==========================================================
-    // ERROR STATE
+    // ERROR
     // ==========================================================
 
     const [error, setError] = useState("");
 
 
     // ==========================================================
-    // ASSIGNING BED STATE
-    // Stores the bed currently being assigned
+    // SELECTED BED
     // ==========================================================
 
-    const [assigningBedId, setAssigningBedId] = useState(null);
+    const [selectedBed, setSelectedBed] = useState(null);
 
 
     // ==========================================================
-    // SELECTED PATIENT STATE
+    // MODAL TYPE
+    //
+    // null
+    // assign
+    // release
+    // ==========================================================
+
+    const [modalType, setModalType] = useState(null);
+
+
+    // ==========================================================
+    // SELECTED PATIENT
     // ==========================================================
 
     const [selectedPatientId, setSelectedPatientId] = useState("");
 
 
     // ==========================================================
-    // ACTION LOADING STATE
-    // Used for assign / release / delete actions
+    // ACTION LOADING
     // ==========================================================
 
     const [actionLoading, setActionLoading] = useState(false);
@@ -106,13 +113,12 @@ function BedList() {
 
         try {
 
-            const response = await axios.get(
-                "http://localhost:5000/api/beds"
-            );
+            setError("");
 
+            const response = await api.get("/beds");
 
             setBeds(
-                response.data.beds || []
+                response.data?.beds || []
             );
 
         }
@@ -123,7 +129,6 @@ function BedList() {
                 "Error fetching beds:",
                 error
             );
-
 
             setError(
                 error.response?.data?.error ||
@@ -143,13 +148,10 @@ function BedList() {
 
         try {
 
-            const response = await axios.get(
-                "http://localhost:5000/api/patients"
-            );
-
+            const response = await api.get("/patients");
 
             setPatients(
-                response.data.patients || []
+                response.data?.patients || []
             );
 
         }
@@ -160,7 +162,6 @@ function BedList() {
                 "Error fetching patients:",
                 error
             );
-
 
             setError(
                 error.response?.data?.error ||
@@ -182,12 +183,11 @@ function BedList() {
 
             try {
 
+                setLoading(true);
+
                 await Promise.all([
-
                     fetchBeds(),
-
                     fetchPatients()
-
                 ]);
 
             }
@@ -203,52 +203,137 @@ function BedList() {
 
         loadData();
 
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-
     }, []);
 
 
     // ==========================================================
-    // OPEN ASSIGN PATIENT UI
+    // BED STATISTICS
     // ==========================================================
 
-    const handleAssignClick = (bedId) => {
+    const totalBeds = beds.length;
 
-        setAssigningBedId(bedId);
+
+    const availableBeds = beds.filter(
+        (bed) => bed.status === "Available"
+    ).length;
+
+
+    const occupiedBeds = beds.filter(
+        (bed) => bed.status === "Occupied"
+    ).length;
+
+
+    const maintenanceBeds = beds.filter(
+        (bed) => bed.status === "Maintenance"
+    ).length;
+
+
+    // ==========================================================
+    // OVERALL OCCUPANCY
+    // ==========================================================
+
+    const occupancyPercentage =
+        totalBeds > 0
+            ? Math.round(
+                (occupiedBeds / totalBeds) * 100
+            )
+            : 0;
+
+
+    // ==========================================================
+    // GROUP BEDS BY WARD
+    // ==========================================================
+
+    const bedsByWard = beds.reduce(
+        (groups, bed) => {
+
+            const wardName =
+                bed.ward || "Unassigned Ward";
+
+
+            if (!groups[wardName]) {
+
+                groups[wardName] = [];
+
+            }
+
+
+            groups[wardName].push(bed);
+
+
+            return groups;
+
+        },
+        {}
+    );
+
+
+    // ==========================================================
+    // OPEN ASSIGN MODAL
+    // ==========================================================
+
+    const handleAssignClick = (bed) => {
+
+        setSelectedBed(bed);
 
         setSelectedPatientId("");
+
+        setModalType("assign");
 
     };
 
 
     // ==========================================================
-    // CANCEL ASSIGNMENT
+    // OPEN RELEASE MODAL
     // ==========================================================
 
-    const handleCancelAssign = () => {
+    const handleReleaseClick = (bed) => {
 
-        setAssigningBedId(null);
+        setSelectedBed(bed);
 
-        setSelectedPatientId("");
+        setModalType("release");
 
     };
 
 
     // ==========================================================
-    // ASSIGN PATIENT TO BED
+    // CLOSE MODAL
     // ==========================================================
 
-    const handleAssignPatient = async (bedId) => {
+    const closeModal = () => {
 
-        // ==========================================================
-        // CHECK PATIENT SELECTION
-        // ==========================================================
+        if (actionLoading) {
+
+            return;
+
+        }
+
+
+        setSelectedBed(null);
+
+        setSelectedPatientId("");
+
+        setModalType(null);
+
+    };
+
+
+    // ==========================================================
+    // ASSIGN PATIENT
+    // ==========================================================
+
+    const handleAssignPatient = async () => {
+
+        if (!selectedBed) {
+
+            return;
+
+        }
+
 
         if (!selectedPatientId) {
 
-            alert(
-                "Please select a patient"
-            );
+            alert("Please select a patient.");
 
             return;
 
@@ -260,47 +345,28 @@ function BedList() {
             setActionLoading(true);
 
 
-            // ==========================================================
-            // ASSIGN PATIENT API
-            // ==========================================================
-
-            await axios.put(
-
-                `http://localhost:5000/api/beds/${bedId}/assign`,
-
+            await api.put(
+                `/beds/${selectedBed.id}/assign`,
                 {
-
                     patientId:
                         Number(selectedPatientId)
-
                 }
-
             );
 
-
-            // ==========================================================
-            // SUCCESS MESSAGE
-            // ==========================================================
 
             alert(
-                "Patient assigned to bed successfully"
+                "Patient assigned to bed successfully."
             );
 
-
-            // ==========================================================
-            // REFRESH BEDS
-            // ==========================================================
 
             await fetchBeds();
 
 
-            // ==========================================================
-            // RESET ASSIGNMENT UI
-            // ==========================================================
-
-            setAssigningBedId(null);
+            setSelectedBed(null);
 
             setSelectedPatientId("");
+
+            setModalType(null);
 
         }
 
@@ -313,11 +379,8 @@ function BedList() {
 
 
             alert(
-
                 error.response?.data?.error ||
-
-                "Failed to assign patient"
-
+                "Failed to assign patient."
             );
 
         }
@@ -335,20 +398,9 @@ function BedList() {
     // RELEASE BED
     // ==========================================================
 
-    const handleReleaseBed = async (bedId) => {
+    const handleReleaseBed = async () => {
 
-        // ==========================================================
-        // CONFIRM RELEASE
-        // ==========================================================
-
-        const confirmRelease = window.confirm(
-
-            "Are you sure you want to release this bed?"
-
-        );
-
-
-        if (!confirmRelease) {
+        if (!selectedBed) {
 
             return;
 
@@ -360,31 +412,24 @@ function BedList() {
             setActionLoading(true);
 
 
-            // ==========================================================
-            // RELEASE BED API
-            // ==========================================================
-
-            await axios.put(
-
-                `http://localhost:5000/api/beds/${bedId}/release`
-
+            await api.put(
+                `/beds/${selectedBed.id}/release`
             );
 
-
-            // ==========================================================
-            // SUCCESS MESSAGE
-            // ==========================================================
 
             alert(
-                "Bed released successfully"
+                "Bed released successfully."
             );
 
 
-            // ==========================================================
-            // REFRESH BED LIST
-            // ==========================================================
-
             await fetchBeds();
+
+
+            setSelectedBed(null);
+
+            setSelectedPatientId("");
+
+            setModalType(null);
 
         }
 
@@ -397,11 +442,8 @@ function BedList() {
 
 
             alert(
-
                 error.response?.data?.error ||
-
-                "Failed to release bed"
-
+                "Failed to release bed."
             );
 
         }
@@ -421,17 +463,10 @@ function BedList() {
 
     const handleDeleteBed = async (bed) => {
 
-        // ==========================================================
-        // SAFETY CHECK
-        // Do not allow occupied beds to be deleted
-        // ==========================================================
-
         if (bed.status === "Occupied") {
 
             alert(
-
                 "Occupied beds cannot be deleted. Release the bed first."
-
             );
 
             return;
@@ -439,18 +474,12 @@ function BedList() {
         }
 
 
-        // ==========================================================
-        // CONFIRM DELETE
-        // ==========================================================
-
-        const confirmDelete = window.confirm(
-
+        const confirmed = window.confirm(
             `Are you sure you want to delete bed ${bed.bed_number}?`
-
         );
 
 
-        if (!confirmDelete) {
+        if (!confirmed) {
 
             return;
 
@@ -462,29 +491,15 @@ function BedList() {
             setActionLoading(true);
 
 
-            // ==========================================================
-            // DELETE BED API
-            // ==========================================================
-
-            await axios.delete(
-
-                `http://localhost:5000/api/beds/${bed.id}`
-
+            await api.delete(
+                `/beds/${bed.id}`
             );
 
-
-            // ==========================================================
-            // SUCCESS MESSAGE
-            // ==========================================================
 
             alert(
-                "Bed deleted successfully"
+                "Bed deleted successfully."
             );
 
-
-            // ==========================================================
-            // REFRESH BED LIST
-            // ==========================================================
 
             await fetchBeds();
 
@@ -499,11 +514,8 @@ function BedList() {
 
 
             alert(
-
                 error.response?.data?.error ||
-
-                "Failed to delete bed"
-
+                "Failed to delete bed."
             );
 
         }
@@ -511,6 +523,94 @@ function BedList() {
         finally {
 
             setActionLoading(false);
+
+        }
+
+    };
+
+
+    // ==========================================================
+    // STATUS STYLES
+    // ==========================================================
+
+    const getStatusStyles = (status) => {
+
+        switch (status) {
+
+            case "Available":
+
+                return {
+
+                    card:
+                        "border-green-200 bg-green-50",
+
+                    dot:
+                        "bg-green-500",
+
+                    badge:
+                        "bg-green-100 text-green-700",
+
+                    statusText:
+                        "text-green-700"
+
+                };
+
+
+            case "Occupied":
+
+                return {
+
+                    card:
+                        "border-red-200 bg-red-50",
+
+                    dot:
+                        "bg-red-500",
+
+                    badge:
+                        "bg-red-100 text-red-700",
+
+                    statusText:
+                        "text-red-700"
+
+                };
+
+
+            case "Maintenance":
+
+                return {
+
+                    card:
+                        "border-yellow-200 bg-yellow-50",
+
+                    dot:
+                        "bg-yellow-500",
+
+                    badge:
+                        "bg-yellow-100 text-yellow-700",
+
+                    statusText:
+                        "text-yellow-700"
+
+                };
+
+
+            default:
+
+                return {
+
+                    card:
+                        "border-gray-200 bg-gray-50",
+
+                    dot:
+                        "bg-gray-500",
+
+                    badge:
+                        "bg-gray-100 text-gray-700",
+
+                    statusText:
+                        "text-gray-700"
+
+                };
 
         }
 
@@ -533,15 +633,33 @@ function BedList() {
 
                     <Sidebar />
 
-                    <div className="flex-1 p-8">
+                    <main className="flex-1 min-w-0 p-6 lg:p-8">
 
-                        <p className="text-gray-500">
+                        <div className="bg-white rounded-xl shadow-sm p-8">
 
-                            Loading beds...
+                            <div className="animate-pulse space-y-4">
 
-                        </p>
+                                <div className="h-8 bg-gray-200 rounded w-1/3"></div>
 
-                    </div>
+                                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+
+                                    <div className="h-28 bg-gray-200 rounded-xl"></div>
+
+                                    <div className="h-28 bg-gray-200 rounded-xl"></div>
+
+                                    <div className="h-28 bg-gray-200 rounded-xl"></div>
+
+                                    <div className="h-28 bg-gray-200 rounded-xl"></div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </main>
 
                 </div>
 
@@ -560,47 +678,51 @@ function BedList() {
 
         <div className="min-h-screen bg-gray-100">
 
-
-            {/* ==========================================================
+            {/* ======================================================
                 NAVBAR
-            ========================================================== */}
+            ====================================================== */}
 
             <Navbar />
 
 
             <div className="flex">
 
-
-                {/* ==========================================================
+                {/* ==================================================
                     SIDEBAR
-                ========================================================== */}
+                ================================================== */}
 
                 <Sidebar />
 
 
-                {/* ==========================================================
+                {/* ==================================================
                     MAIN CONTENT
-                ========================================================== */}
+                ================================================== */}
 
-                <div className="flex-1 p-8">
+                <main className="flex-1 min-w-0 p-5 sm:p-6 lg:p-8">
+
+                    {/* ==================================================
+                        PAGE HEADER
+                    ================================================== */}
+
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-7">
+
+                        <div>
+
+                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+
+                                Bed Management
+
+                            </h1>
 
 
-                    {/* ==========================================================
-                        HEADER
-                    ========================================================== */}
+                            <p className="text-gray-500 mt-1">
 
-                    <div className="flex justify-between items-center mb-6">
+                                Monitor bed availability and manage patient assignments.
 
-                        <h1 className="text-3xl font-bold">
+                            </p>
 
-                            Bed Management
+                        </div>
 
-                        </h1>
-
-
-                        {/* ==========================================================
-                            ADD BED BUTTON
-                        ========================================================== */}
 
                         <button
 
@@ -608,519 +730,1051 @@ function BedList() {
                                 navigate("/beds/add")
                             }
 
-                            className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700"
+                            className="self-start lg:self-auto inline-flex items-center justify-center bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition shadow-sm"
 
                         >
 
-                            + Add Bed
+                            <span className="text-lg mr-1">
+
+                                +
+
+                            </span>
+
+                            Add Bed
 
                         </button>
 
                     </div>
 
 
-                    {/* ==========================================================
+                    {/* ==================================================
                         ERROR MESSAGE
-                    ========================================================== */}
+                    ================================================== */}
 
                     {error && (
 
-                        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
+                        <div className="mb-6 flex items-center justify-between gap-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
 
-                            {error}
+                            <p className="text-sm">
+
+                                {error}
+
+                            </p>
+
+
+                            <button
+
+                                onClick={() => {
+                                    setError("");
+                                    fetchBeds();
+                                    fetchPatients();
+                                }}
+
+                                className="text-sm font-medium underline hover:no-underline"
+
+                            >
+
+                                Retry
+
+                            </button>
 
                         </div>
 
                     )}
 
 
-                    {/* ==========================================================
-                        NO BEDS
-                    ========================================================== */}
+                    {/* ==================================================
+                        SUMMARY CARDS
+                    ================================================== */}
 
-                    {beds.length === 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-7">
 
-                        <div className="bg-white rounded-xl shadow p-6">
 
-                            <p className="text-gray-500">
+                        {/* TOTAL */}
 
-                                No beds found.
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+
+                            <p className="text-sm font-medium text-gray-500">
+
+                                Total Beds
+
+                            </p>
+
+
+                            <p className="text-3xl font-bold text-gray-800 mt-2">
+
+                                {totalBeds}
+
+                            </p>
+
+
+                            <p className="text-sm text-gray-400 mt-1">
+
+                                Hospital capacity
 
                             </p>
 
                         </div>
 
+
+                        {/* AVAILABLE */}
+
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+
+                            <p className="text-sm font-medium text-gray-500">
+
+                                Available
+
+                            </p>
+
+
+                            <p className="text-3xl font-bold text-green-600 mt-2">
+
+                                {availableBeds}
+
+                            </p>
+
+
+                            <p className="text-sm text-gray-400 mt-1">
+
+                                Ready for assignment
+
+                            </p>
+
+                        </div>
+
+
+                        {/* OCCUPIED */}
+
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+
+                            <p className="text-sm font-medium text-gray-500">
+
+                                Occupied
+
+                            </p>
+
+
+                            <p className="text-3xl font-bold text-red-600 mt-2">
+
+                                {occupiedBeds}
+
+                            </p>
+
+
+                            <p className="text-sm text-gray-400 mt-1">
+
+                                {occupancyPercentage}% occupancy
+
+                            </p>
+
+                        </div>
+
+
+                        {/* MAINTENANCE */}
+
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+
+                            <p className="text-sm font-medium text-gray-500">
+
+                                Maintenance
+
+                            </p>
+
+
+                            <p className="text-3xl font-bold text-yellow-600 mt-2">
+
+                                {maintenanceBeds}
+
+                            </p>
+
+
+                            <p className="text-sm text-gray-400 mt-1">
+
+                                Currently unavailable
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    {/* ==================================================
+                        EMPTY STATE
+                    ================================================== */}
+
+                    {beds.length === 0 ? (
+
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-10 text-center">
+
+                            <div className="text-4xl mb-3">
+
+                                🛏️
+
+                            </div>
+
+
+                            <h2 className="text-xl font-semibold text-gray-700">
+
+                                No beds found
+
+                            </h2>
+
+
+                            <p className="text-gray-500 mt-2 mb-5">
+
+                                Add your first hospital bed to begin managing capacity.
+
+                            </p>
+
+
+                            <button
+
+                                onClick={() =>
+                                    navigate("/beds/add")
+                                }
+
+                                className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition"
+
+                            >
+
+                                + Add Bed
+
+                            </button>
+
+                        </div>
+
                     ) : (
 
-                        /* ==========================================================
-                           BED TABLE
-                        ========================================================== */
+                        /* ==================================================
+                           WARD SECTIONS
+                        ================================================== */
 
-                        <div className="bg-white rounded-xl shadow overflow-x-auto">
+                        <div className="space-y-6">
 
-                            <table className="w-full">
+                            {Object.entries(bedsByWard).map(
 
+                                ([wardName, wardBeds]) => {
 
-                                {/* ==========================================================
-                                    TABLE HEADER
-                                ========================================================== */}
+                                    // ==========================================
+                                    // WARD STATISTICS
+                                    // ==========================================
 
-                                <thead>
-
-                                    <tr className="border-b bg-gray-50">
-
-                                        <th className="text-left p-4">
-
-                                            Bed Number
-
-                                        </th>
+                                    const wardOccupied =
+                                        wardBeds.filter(
+                                            (bed) =>
+                                                bed.status === "Occupied"
+                                        ).length;
 
 
-                                        <th className="text-left p-4">
-
-                                            Ward
-
-                                        </th>
-
-
-                                        <th className="text-left p-4">
-
-                                            Bed Type
-
-                                        </th>
+                                    const wardAvailable =
+                                        wardBeds.filter(
+                                            (bed) =>
+                                                bed.status === "Available"
+                                        ).length;
 
 
-                                        <th className="text-left p-4">
-
-                                            Status
-
-                                        </th>
-
-
-                                        <th className="text-left p-4">
-
-                                            Patient
-
-                                        </th>
+                                    const wardMaintenance =
+                                        wardBeds.filter(
+                                            (bed) =>
+                                                bed.status === "Maintenance"
+                                        ).length;
 
 
-                                        <th className="text-left p-4">
+                                    const wardOccupancy =
+                                        wardBeds.length > 0
+                                            ? Math.round(
+                                                (wardOccupied /
+                                                    wardBeds.length) *
+                                                100
+                                            )
+                                            : 0;
 
-                                            Actions
 
-                                        </th>
+                                    return (
 
-                                    </tr>
+                                        <section
 
-                                </thead>
+                                            key={wardName}
 
-
-                                {/* ==========================================================
-                                    TABLE BODY
-                                ========================================================== */}
-
-                                <tbody>
-
-                                    {beds.map((bed) => (
-
-                                        <tr
-
-                                            key={bed.id}
-
-                                            className="border-b hover:bg-gray-50"
+                                            className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
 
                                         >
 
+                                            {/* ==========================================
+                                                WARD HEADER
+                                            ========================================== */}
 
-                                            {/* ==========================================================
-                                                BED NUMBER
-                                            ========================================================== */}
+                                            <div className="px-5 sm:px-6 py-4 border-b border-gray-200">
 
-                                            <td className="p-4">
+                                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-                                                <button
 
-                                                    onClick={() =>
+                                                    {/* WARD INFO */}
 
-                                                        navigate(
+                                                    <div>
 
-                                                            `/beds/${bed.id}`
+                                                        <h2 className="text-xl font-bold text-gray-800">
 
-                                                        )
+                                                            {wardName}
 
-                                                    }
+                                                        </h2>
 
-                                                    className="text-blue-600 font-semibold hover:underline"
 
-                                                >
+                                                        <p className="text-sm text-gray-500 mt-1">
 
-                                                    {bed.bed_number}
+                                                            {wardBeds.length}{" "}
+                                                            {wardBeds.length === 1
+                                                                ? "bed"
+                                                                : "beds"}
 
-                                                </button>
+                                                            {" • "}
 
-                                            </td>
+                                                            {wardAvailable} available
 
+                                                            {" • "}
 
-                                            {/* ==========================================================
-                                                WARD
-                                            ========================================================== */}
+                                                            {wardOccupied} occupied
 
-                                            <td className="p-4">
+                                                            {wardMaintenance > 0 && (
 
-                                                {bed.ward}
+                                                                <>
+                                                                    {" • "}
+                                                                    {wardMaintenance} maintenance
+                                                                </>
 
-                                            </td>
+                                                            )}
 
+                                                        </p>
 
-                                            {/* ==========================================================
-                                                BED TYPE
-                                            ========================================================== */}
+                                                    </div>
 
-                                            <td className="p-4">
 
-                                                {bed.bed_type}
+                                                    {/* OCCUPANCY */}
 
-                                            </td>
+                                                    <div className="w-full md:w-56">
 
+                                                        <div className="flex items-center justify-between mb-1.5">
 
-                                            {/* ==========================================================
-                                                STATUS
-                                            ========================================================== */}
+                                                            <span className="text-sm text-gray-500">
 
-                                            <td className="p-4">
+                                                                Occupancy
 
-                                                {bed.status}
+                                                            </span>
 
-                                            </td>
 
+                                                            <span className="text-sm font-bold text-gray-700">
 
-                                            {/* ==========================================================
-                                                PATIENT
-                                            ========================================================== */}
+                                                                {wardOccupancy}%
 
-                                            <td className="p-4">
+                                                            </span>
 
-                                                {bed.patient_name || "—"}
+                                                        </div>
 
-                                            </td>
 
+                                                        <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
 
-                                            {/* ==========================================================
-                                                ACTIONS
-                                            ========================================================== */}
+                                                            <div
 
-                                            <td className="p-4">
+                                                                className="h-full bg-blue-600 rounded-full transition-all duration-300"
 
-                                                <div className="flex flex-wrap gap-2">
+                                                                style={{
 
+                                                                    width:
+                                                                        `${wardOccupancy}%`
 
-                                                    {/* ==========================================================
-                                                        EDIT
-                                                    ========================================================== */}
+                                                                }}
 
-                                                    <button
+                                                            />
 
-                                                        onClick={() =>
+                                                        </div>
 
-                                                            navigate(
+                                                    </div>
 
-                                                                `/beds/edit/${bed.id}`
+                                                </div>
 
-                                                            )
+                                            </div>
 
-                                                        }
 
-                                                        className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600"
+                                            {/* ==========================================
+                                                BED GRID
+                                            ========================================== */}
 
-                                                    >
+                                            <div className="p-5 sm:p-6">
 
-                                                        Edit
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 
-                                                    </button>
+                                                    {wardBeds.map(
 
+                                                        (bed) => {
 
-                                                    {/* ==========================================================
-                                                        AVAILABLE BED
-                                                    ========================================================== */}
+                                                            const styles =
+                                                                getStatusStyles(
+                                                                    bed.status
+                                                                );
 
-                                                    {bed.status === "Available" && (
 
-                                                        <>
+                                                            return (
 
-                                                            {assigningBedId === bed.id ? (
+                                                                <div
 
-                                                                <div className="flex flex-col gap-2">
+                                                                    key={bed.id}
 
+                                                                    className={`border rounded-xl p-4 ${styles.card} transition duration-200 hover:shadow-md`}
 
-                                                                    {/* ==========================================================
-                                                                        PATIENT SELECT
-                                                                    ========================================================== */}
+                                                                >
 
-                                                                    <select
+                                                                    {/* ==========================================
+                                                                        BED HEADER
+                                                                    ========================================== */}
 
-                                                                        value={
-                                                                            selectedPatientId
-                                                                        }
-
-                                                                        onChange={(event) =>
-
-                                                                            setSelectedPatientId(
-
-                                                                                event.target.value
-
-                                                                            )
-
-                                                                        }
-
-                                                                        className="border rounded-lg p-2"
-
-                                                                    >
-
-                                                                        <option value="">
-
-                                                                            Select Patient
-
-                                                                        </option>
-
-
-                                                                        {patients.map(
-
-                                                                            (patient) => (
-
-                                                                                <option
-
-                                                                                    key={patient.id}
-
-                                                                                    value={patient.id}
-
-                                                                                >
-
-                                                                                    {patient.patient_name}
-
-                                                                                </option>
-
-                                                                            )
-
-                                                                        )}
-
-                                                                    </select>
-
-
-                                                                    {/* ==========================================================
-                                                                        ASSIGN / CANCEL BUTTONS
-                                                                    ========================================================== */}
-
-                                                                    <div className="flex gap-2">
-
+                                                                    <div className="flex items-start justify-between gap-3 mb-4">
 
                                                                         <button
 
                                                                             onClick={() =>
-
-                                                                                handleAssignPatient(
-
-                                                                                    bed.id
-
+                                                                                navigate(
+                                                                                    `/beds/${bed.id}`
                                                                                 )
-
                                                                             }
 
-                                                                            disabled={actionLoading}
-
-                                                                            className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                                                                            className="text-lg font-bold text-blue-600 hover:text-blue-800 hover:underline truncate"
 
                                                                         >
 
-                                                                            {actionLoading
-
-                                                                                ? "Assigning..."
-
-                                                                                : "Confirm Assign"
-
-                                                                            }
+                                                                            {bed.bed_number}
 
                                                                         </button>
 
+
+                                                                        <span
+
+                                                                            className={`shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${styles.badge}`}
+
+                                                                        >
+
+                                                                            <span
+
+                                                                                className={`w-1.5 h-1.5 rounded-full ${styles.dot}`}
+
+                                                                            />
+
+                                                                            {bed.status}
+
+                                                                        </span>
+
+                                                                    </div>
+
+
+                                                                    {/* ==========================================
+                                                                        BED TYPE
+                                                                    ========================================== */}
+
+                                                                    <div className="mb-3">
+
+                                                                        <p className="text-xs uppercase tracking-wide text-gray-500 font-medium">
+
+                                                                            Bed Type
+
+                                                                        </p>
+
+
+                                                                        <p className="text-sm font-semibold text-gray-700 mt-0.5">
+
+                                                                            {bed.bed_type || "—"}
+
+                                                                        </p>
+
+                                                                    </div>
+
+
+                                                                    {/* ==========================================
+                                                                        PATIENT
+                                                                    ========================================== */}
+
+                                                                    <div className="bg-white/60 rounded-lg p-3 mb-4">
+
+                                                                        <p className="text-xs uppercase tracking-wide text-gray-500 font-medium">
+
+                                                                            Patient
+
+                                                                        </p>
+
+
+                                                                        {bed.patient_name ? (
+
+                                                                            <p className="text-sm font-semibold text-gray-800 mt-1 truncate">
+
+                                                                                {bed.patient_name}
+
+                                                                            </p>
+
+                                                                        ) : (
+
+                                                                            <p className="text-sm text-gray-400 mt-1">
+
+                                                                                No patient assigned
+
+                                                                            </p>
+
+                                                                        )}
+
+                                                                    </div>
+
+
+                                                                    {/* ==========================================
+                                                                        ACTIONS
+                                                                    ========================================== */}
+
+                                                                    <div className="flex flex-wrap gap-2">
+
+
+                                                                        {/* VIEW */}
 
                                                                         <button
 
-                                                                            onClick={
-
-                                                                                handleCancelAssign
-
+                                                                            onClick={() =>
+                                                                                navigate(
+                                                                                    `/beds/${bed.id}`
+                                                                                )
                                                                             }
 
-                                                                            disabled={actionLoading}
-
-                                                                            className="bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 disabled:opacity-50"
+                                                                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition"
 
                                                                         >
 
-                                                                            Cancel
+                                                                            View
 
                                                                         </button>
+
+
+                                                                        {/* EDIT */}
+
+                                                                        <button
+
+                                                                            onClick={() =>
+                                                                                navigate(
+                                                                                    `/beds/edit/${bed.id}`
+                                                                                )
+                                                                            }
+
+                                                                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-600 transition"
+
+                                                                        >
+
+                                                                            Edit
+
+                                                                        </button>
+
+
+                                                                        {/* AVAILABLE */}
+
+                                                                        {bed.status === "Available" && (
+
+                                                                            <>
+
+                                                                                <button
+
+                                                                                    onClick={() =>
+                                                                                        handleAssignClick(
+                                                                                            bed
+                                                                                        )
+                                                                                    }
+
+                                                                                    disabled={actionLoading}
+
+                                                                                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50"
+
+                                                                                >
+
+                                                                                    Assign
+
+                                                                                </button>
+
+
+                                                                                <button
+
+                                                                                    onClick={() =>
+                                                                                        handleDeleteBed(
+                                                                                            bed
+                                                                                        )
+                                                                                    }
+
+                                                                                    disabled={actionLoading}
+
+                                                                                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50"
+
+                                                                                >
+
+                                                                                    Delete
+
+                                                                                </button>
+
+                                                                            </>
+
+                                                                        )}
+
+
+                                                                        {/* OCCUPIED */}
+
+                                                                        {bed.status === "Occupied" && (
+
+                                                                            <button
+
+                                                                                onClick={() =>
+                                                                                    handleReleaseClick(
+                                                                                        bed
+                                                                                    )
+                                                                                }
+
+                                                                                disabled={actionLoading}
+
+                                                                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50"
+
+                                                                            >
+
+                                                                                Release
+
+                                                                            </button>
+
+                                                                        )}
+
+
+                                                                        {/* MAINTENANCE */}
+
+                                                                        {bed.status === "Maintenance" && (
+
+                                                                            <>
+
+                                                                                <span className="inline-flex items-center px-2 py-1.5 text-xs text-gray-500">
+
+                                                                                    Not available
+
+                                                                                </span>
+
+
+                                                                                <button
+
+                                                                                    onClick={() =>
+                                                                                        handleDeleteBed(
+                                                                                            bed
+                                                                                        )
+                                                                                    }
+
+                                                                                    disabled={actionLoading}
+
+                                                                                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50"
+
+                                                                                >
+
+                                                                                    Delete
+
+                                                                                </button>
+
+                                                                            </>
+
+                                                                        )}
 
                                                                     </div>
 
                                                                 </div>
 
-                                                            ) : (
+                                                            );
 
-                                                                <button
-
-                                                                    onClick={() =>
-
-                                                                        handleAssignClick(
-
-                                                                            bed.id
-
-                                                                        )
-
-                                                                    }
-
-                                                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-
-                                                                >
-
-                                                                    Assign Patient
-
-                                                                </button>
-
-                                                            )}
-
-
-                                                            {/* ==========================================================
-                                                                DELETE AVAILABLE BED
-                                                            ========================================================== */}
-
-                                                            <button
-
-                                                                onClick={() =>
-
-                                                                    handleDeleteBed(
-
-                                                                        bed
-
-                                                                    )
-
-                                                                }
-
-                                                                disabled={actionLoading}
-
-                                                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
-
-                                                            >
-
-                                                                Delete
-
-                                                            </button>
-
-                                                        </>
-
-                                                    )}
-
-
-                                                    {/* ==========================================================
-                                                        OCCUPIED BED
-                                                    ========================================================== */}
-
-                                                    {bed.status === "Occupied" && (
-
-                                                        <button
-
-                                                            onClick={() =>
-
-                                                                handleReleaseBed(
-
-                                                                    bed.id
-
-                                                                )
-
-                                                            }
-
-                                                            disabled={actionLoading}
-
-                                                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
-
-                                                        >
-
-                                                            {actionLoading
-
-                                                                ? "Releasing..."
-
-                                                                : "Release Bed"
-
-                                                            }
-
-                                                        </button>
-
-                                                    )}
-
-
-                                                    {/* ==========================================================
-                                                        MAINTENANCE BED
-                                                    ========================================================== */}
-
-                                                    {bed.status === "Maintenance" && (
-
-                                                        <>
-
-                                                            <span className="text-gray-500 px-2 py-2">
-
-                                                                Not Available
-
-                                                            </span>
-
-
-                                                            {/* ==========================================================
-                                                                DELETE MAINTENANCE BED
-                                                            ========================================================== */}
-
-                                                            <button
-
-                                                                onClick={() =>
-
-                                                                    handleDeleteBed(
-
-                                                                        bed
-
-                                                                    )
-
-                                                                }
-
-                                                                disabled={actionLoading}
-
-                                                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
-
-                                                            >
-
-                                                                Delete
-
-                                                            </button>
-
-                                                        </>
+                                                        }
 
                                                     )}
 
                                                 </div>
 
-                                            </td>
+                                            </div>
 
-                                        </tr>
+                                        </section>
 
-                                    ))}
+                                    );
 
-                                </tbody>
+                                }
 
-                            </table>
+                            )}
 
                         </div>
 
                     )}
 
-                </div>
+                </main>
 
             </div>
+
+
+            {/* ==============================================================
+                ASSIGN PATIENT MODAL
+            ============================================================== */}
+
+            {modalType === "assign" && selectedBed && (
+
+                <div
+
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+
+                    onMouseDown={(event) => {
+
+                        if (
+                            event.target === event.currentTarget &&
+                            !actionLoading
+                        ) {
+
+                            closeModal();
+
+                        }
+
+                    }}
+
+                >
+
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+
+                        {/* MODAL HEADER */}
+
+                        <div className="px-6 py-5 border-b border-gray-200">
+
+                            <h2 className="text-xl font-bold text-gray-800">
+
+                                Assign Patient
+
+                            </h2>
+
+
+                            <p className="text-sm text-gray-500 mt-1">
+
+                                Assign a patient to{" "}
+
+                                <span className="font-semibold">
+
+                                    {selectedBed.bed_number}
+
+                                </span>
+
+                                .
+
+                            </p>
+
+                        </div>
+
+
+                        {/* MODAL BODY */}
+
+                        <div className="p-6 space-y-5">
+
+
+                            {/* BED INFORMATION */}
+
+                            <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-xl p-4">
+
+                                <div>
+
+                                    <p className="text-xs uppercase tracking-wide text-gray-500">
+
+                                        Bed
+
+                                    </p>
+
+
+                                    <p className="font-semibold text-gray-800 mt-1">
+
+                                        {selectedBed.bed_number}
+
+                                    </p>
+
+                                </div>
+
+
+                                <div>
+
+                                    <p className="text-xs uppercase tracking-wide text-gray-500">
+
+                                        Ward
+
+                                    </p>
+
+
+                                    <p className="font-semibold text-gray-800 mt-1">
+
+                                        {selectedBed.ward || "—"}
+
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            {/* PATIENT SELECT */}
+
+                            <div>
+
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+
+                                    Patient
+
+                                </label>
+
+
+                                <select
+
+                                    value={selectedPatientId}
+
+                                    onChange={(event) =>
+                                        setSelectedPatientId(
+                                            event.target.value
+                                        )
+                                    }
+
+                                    disabled={actionLoading}
+
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-3 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+
+                                >
+
+                                    <option value="">
+
+                                        Select Patient
+
+                                    </option>
+
+
+                                    {patients.map(
+
+                                        (patient) => (
+
+                                            <option
+
+                                                key={patient.id}
+
+                                                value={patient.id}
+
+                                            >
+
+                                                {patient.patient_name}
+
+                                            </option>
+
+                                        )
+
+                                    )}
+
+                                </select>
+
+
+                                {patients.length === 0 && (
+
+                                    <p className="text-xs text-red-500 mt-2">
+
+                                        No patients available for assignment.
+
+                                    </p>
+
+                                )}
+
+                            </div>
+
+                        </div>
+
+
+                        {/* MODAL FOOTER */}
+
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+
+                            <button
+
+                                onClick={closeModal}
+
+                                disabled={actionLoading}
+
+                                className="px-4 py-2.5 rounded-lg bg-gray-500 text-white text-sm font-medium hover:bg-gray-600 transition disabled:opacity-50"
+
+                            >
+
+                                Cancel
+
+                            </button>
+
+
+                            <button
+
+                                onClick={handleAssignPatient}
+
+                                disabled={
+                                    actionLoading ||
+                                    !selectedPatientId
+                                }
+
+                                className="px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
+
+                            >
+
+                                {actionLoading
+                                    ? "Assigning..."
+                                    : "Assign Patient"}
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            )}
+
+
+            {/* ==============================================================
+                RELEASE BED MODAL
+            ============================================================== */}
+
+            {modalType === "release" && selectedBed && (
+
+                <div
+
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+
+                    onMouseDown={(event) => {
+
+                        if (
+                            event.target === event.currentTarget &&
+                            !actionLoading
+                        ) {
+
+                            closeModal();
+
+                        }
+
+                    }}
+
+                >
+
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
+
+                        {/* MODAL BODY */}
+
+                        <div className="p-6">
+
+                            <div className="flex items-center gap-3 mb-4">
+
+                                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+
+                                    <span className="text-red-600 text-lg">
+
+                                        !
+
+                                    </span>
+
+                                </div>
+
+
+                                <div>
+
+                                    <h2 className="text-xl font-bold text-gray-800">
+
+                                        Release Bed
+
+                                    </h2>
+
+
+                                    <p className="text-sm text-gray-500">
+
+                                        Confirm bed release
+
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            <p className="text-gray-600">
+
+                                Are you sure you want to release bed{" "}
+
+                                <strong className="text-gray-800">
+
+                                    {selectedBed.bed_number}
+
+                                </strong>
+
+                                ?
+
+                            </p>
+
+
+                            {selectedBed.patient_name && (
+
+                                <div className="bg-gray-50 rounded-xl p-4 mt-4">
+
+                                    <p className="text-xs uppercase tracking-wide text-gray-500">
+
+                                        Current Patient
+
+                                    </p>
+
+
+                                    <p className="font-semibold text-gray-800 mt-1">
+
+                                        {selectedBed.patient_name}
+
+                                    </p>
+
+                                </div>
+
+                            )}
+
+                        </div>
+
+
+                        {/* MODAL FOOTER */}
+
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+
+                            <button
+
+                                onClick={closeModal}
+
+                                disabled={actionLoading}
+
+                                className="px-4 py-2.5 rounded-lg bg-gray-500 text-white text-sm font-medium hover:bg-gray-600 transition disabled:opacity-50"
+
+                            >
+
+                                Cancel
+
+                            </button>
+
+
+                            <button
+
+                                onClick={handleReleaseBed}
+
+                                disabled={actionLoading}
+
+                                className="px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition disabled:opacity-50"
+
+                            >
+
+                                {actionLoading
+                                    ? "Releasing..."
+                                    : "Release Bed"}
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            )}
 
         </div>
 

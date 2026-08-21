@@ -142,6 +142,7 @@ const addAdmission = async (req, res) => {
                 SELECT
                     id,
                     bed_number,
+                    ward,
                     status,
                     patient_id
                 FROM beds
@@ -284,6 +285,75 @@ const addAdmission = async (req, res) => {
                     patientId,
 
                     bedId
+
+                ]
+
+            );
+
+
+            // ==========================================================
+            // CREATE INITIAL STAY HISTORY
+            // ==========================================================
+
+            const selectedBed = (
+
+                await client.query(
+
+                    `
+                    SELECT
+                        id,
+                        bed_number,
+                        ward
+                    FROM beds
+                    WHERE id = $1
+                    `,
+
+                    [bedId]
+
+                )
+
+            ).rows[0];
+
+
+            await client.query(
+
+                `
+                INSERT INTO patient_stay_history
+                (
+                    patient_id,
+                    admission_id,
+                    bed_id,
+                    ward,
+                    bed_number,
+                    start_date,
+                    status
+                )
+
+                VALUES
+                (
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    $6,
+                    'Active'
+                )
+                `,
+
+                [
+
+                    patientId,
+
+                    admissionResult.rows[0].id,
+
+                    bedId,
+
+                    selectedBed.ward,
+
+                    selectedBed.bed_number,
+
+                    admissionDate
 
                 ]
 
@@ -776,6 +846,39 @@ const dischargePatient = async (req, res) => {
                 `,
 
                 [admission.bed_id]
+
+            );
+
+
+            // ==========================================================
+            // CLOSE ACTIVE STAY HISTORY
+            // ==========================================================
+
+            await client.query(
+
+                `
+                UPDATE patient_stay_history
+
+                SET
+
+                    end_date = COALESCE($1, CURRENT_DATE),
+
+                    status = 'Completed',
+
+                    updated_at = CURRENT_TIMESTAMP
+
+                WHERE admission_id = $2
+
+                AND status = 'Active'
+                `,
+
+                [
+
+                    dischargeDate || null,
+
+                    id
+
+                ]
 
             );
 

@@ -25,7 +25,9 @@ const {
 
 const {
 
-    getPatientMedicalHistory
+    getPatientMedicalHistory,
+    getPatientStayHistory,
+
 
 } = require("../controllers/patientHistoryController");
 
@@ -50,6 +52,25 @@ router.get(
 
 );
 
+// ==========================================================
+// GET PATIENT STAY HISTORY
+// ==========================================================
+
+router.get(
+
+    "/patient/:patientId/stays",
+
+    verifyToken,
+
+    authorizeRoles(
+        "admin",
+        "doctor",
+        "staff"
+    ),
+
+    getPatientStayHistory
+
+);
 
 // ==========================================================
 // EXPORT

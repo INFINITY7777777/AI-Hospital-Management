@@ -20,11 +20,16 @@ const verifyToken = (req, res, next) => {
         const authHeader = req.headers.authorization;
 
 
+        // ======================================================
+        // CHECK TOKEN EXISTS
+        // ======================================================
+
         if (!authHeader) {
 
             return res.status(401).json({
 
-                error: "Access denied. Authentication token is required."
+                error:
+                    "Access denied. Authentication token is required."
 
             });
 
@@ -39,7 +44,8 @@ const verifyToken = (req, res, next) => {
 
             return res.status(401).json({
 
-                error: "Invalid authorization format."
+                error:
+                    "Invalid authorization format."
 
             });
 
@@ -50,14 +56,19 @@ const verifyToken = (req, res, next) => {
         // EXTRACT TOKEN
         // ======================================================
 
-        const token = authHeader.split(" ")[1];
+        const token = authHeader.substring(7).trim();
 
+
+        // ======================================================
+        // CHECK TOKEN EXISTS
+        // ======================================================
 
         if (!token) {
 
             return res.status(401).json({
 
-                error: "Authentication token is missing."
+                error:
+                    "Authentication token is missing."
 
             });
 
@@ -65,7 +76,27 @@ const verifyToken = (req, res, next) => {
 
 
         // ======================================================
-        // VERIFY TOKEN
+        // CHECK JWT SECRET
+        // ======================================================
+
+        if (!process.env.JWT_SECRET) {
+
+            console.error(
+                "[AUTH ERROR]: JWT_SECRET is not configured."
+            );
+
+            return res.status(500).json({
+
+                error:
+                    "Server authentication configuration is missing."
+
+            });
+
+        }
+
+
+        // ======================================================
+        // VERIFY JWT
         // ======================================================
 
         const decoded = jwt.verify(
@@ -78,12 +109,48 @@ const verifyToken = (req, res, next) => {
 
 
         // ======================================================
+        // CHECK USER ID
+        // ======================================================
+
+        if (!decoded.id) {
+
+            return res.status(401).json({
+
+                error:
+                    "Invalid authentication token."
+
+            });
+
+        }
+
+
+        // ======================================================
         // NORMALIZE ROLE
         // ======================================================
 
         const normalizedRole = decoded.role
-            ? decoded.role.toLowerCase().trim()
+
+            ? String(decoded.role)
+                .toLowerCase()
+                .trim()
+
             : "";
+
+
+        // ======================================================
+        // CHECK ROLE
+        // ======================================================
+
+        if (!normalizedRole) {
+
+            return res.status(401).json({
+
+                error:
+                    "Authentication token does not contain a valid role."
+
+            });
+
+        }
 
 
         // ======================================================
@@ -104,10 +171,12 @@ const verifyToken = (req, res, next) => {
         // ======================================================
 
         console.log(
+
             "[AUTH CHECK] User:",
             req.user.id,
             "| Role:",
             req.user.role
+
         );
 
 
@@ -119,20 +188,72 @@ const verifyToken = (req, res, next) => {
 
     }
 
+
+    // ==========================================================
+    // JWT EXPIRED
+    // ==========================================================
+
     catch (error) {
 
         console.error(
 
             "[AUTH ERROR]:",
-
+            error.name,
+            "|",
             error.message
 
         );
 
 
+        // ======================================================
+        // EXPIRED TOKEN
+        // ======================================================
+
+        if (error.name === "TokenExpiredError") {
+
+            return res.status(401).json({
+
+                error:
+                    "Authentication token has expired. Please log in again.",
+
+                code:
+                    "TOKEN_EXPIRED"
+
+            });
+
+        }
+
+
+        // ======================================================
+        // INVALID TOKEN
+        // ======================================================
+
+        if (error.name === "JsonWebTokenError") {
+
+            return res.status(401).json({
+
+                error:
+                    "Invalid authentication token.",
+
+                code:
+                    "INVALID_TOKEN"
+
+            });
+
+        }
+
+
+        // ======================================================
+        // OTHER JWT ERROR
+        // ======================================================
+
         return res.status(401).json({
 
-            error: "Invalid or expired authentication token."
+            error:
+                "Authentication failed.",
+
+            code:
+                "AUTHENTICATION_FAILED"
 
         });
 
@@ -157,7 +278,8 @@ const authorizeRoles = (...allowedRoles) => {
 
             return res.status(401).json({
 
-                error: "Authentication required."
+                error:
+                    "Authentication required."
 
             });
 
@@ -170,7 +292,10 @@ const authorizeRoles = (...allowedRoles) => {
 
         const normalizedAllowedRoles = allowedRoles.map(
 
-            (role) => role.toLowerCase().trim()
+            (role) =>
+                String(role)
+                    .toLowerCase()
+                    .trim()
 
         );
 
@@ -182,10 +307,13 @@ const authorizeRoles = (...allowedRoles) => {
         console.log(
 
             "[ROLE CHECK]",
+
             "User:",
             req.user.id,
+
             "| Role:",
             req.user.role,
+
             "| Allowed:",
             normalizedAllowedRoles
 
@@ -196,11 +324,16 @@ const authorizeRoles = (...allowedRoles) => {
         // CHECK ROLE
         // ======================================================
 
-        if (!normalizedAllowedRoles.includes(req.user.role)) {
+        if (
+            !normalizedAllowedRoles.includes(
+                req.user.role
+            )
+        ) {
 
             return res.status(403).json({
 
-                error: "You do not have permission to perform this action."
+                error:
+                    "You do not have permission to perform this action."
 
             });
 

@@ -3,85 +3,75 @@
 // Displays navigation links for the Hospital Management System
 // ==========================================================
 
-
 import { Link } from "react-router-dom";
 
 function Sidebar() {
+  return (
+    <div className="w-64 bg-white shadow-lg min-h-screen p-6">
+      <h2 className="text-xl font-bold text-blue-700 mb-6">Menu</h2>
 
-    return (
+      <ul className="space-y-4">
+        <li>
+          <Link
+            to="/dashboard"
+            className="block hover:text-blue-600 transition"
+          >
+            🏠 Dashboard
+          </Link>
+        </li>
 
-        <div className="w-64 bg-white shadow-lg min-h-screen p-6">
+        <li>
+          <Link to="/doctors" className="block hover:text-blue-600 transition">
+            👨‍⚕️ Doctors
+          </Link>
+        </li>
 
-            <h2 className="text-xl font-bold text-blue-700 mb-6">
-                Menu
-            </h2>
+        <li>
+          <Link
+            to="/patients"
+            className="block hover:text-blue-600 transition"
+          >
+            🧑 Patients
+          </Link>
+        </li>
 
-            <ul className="space-y-4">
+        <li>
+          <Link
+            to="/appointments"
+            className="block hover:text-blue-600 transition"
+          >
+            📅 Appointments
+          </Link>
+        </li>
 
-                <li className="cursor-pointer hover:text-blue-600">
-                    🏠 Dashboard
-                </li>
+        <li className="cursor-pointer hover:text-blue-600 transition">
+          💊 Pharmacy
+        </li>
 
-                <li> 
-                    <Link
-                        to="/doctors"
-                        className="hover:text-blue-600"
-                    >
-                        👨‍⚕️ Doctors
-                    </Link>
-                </li>
-                <li>
+        <li>
+          <Link
+            to="/beds"
+            className="block hover:text-blue-600 transition"
+          >
+            🛏 Beds
+          </Link>
+        </li>
 
-                    <Link
-                        to="/patients"
-                        className="hover:text-blue-600"
-                    >
-                        🧑 Patients
-                    </Link>
+        <li>
+          <Link
+            to="/admissions"
+            className="block hover:text-blue-600 transition"
+          >
+            😷 Admissions
+          </Link>
+        </li>
 
-                </li>
-
-                <li className="cursor-pointer hover:text-blue-600">
-                    <Link to="/appointments">
-                        📅 Appointments
-                    </Link>
-                </li>
-
-                <li className="cursor-pointer hover:text-blue-600">
-                    💊 Pharmacy
-                    
-                </li>
-
-                <li className="cursor-pointer hover:text-blue-600">
-                    
-                    <Link
-                        to="/beds"
-                        className="block px-4 py-2 hover:bg-gray-100"
-                    >
-                        🛏 Beds
-                    </Link>
-                
-                </li>
-
-                <li className="cursor-pointer hover:text-blue-600">
-                    <Link
-                        to="/admissions"
-                        className="block px-4 py-2 hover:bg-gray-100"
-                    >
-                        Admissions
-                    </Link>
-                </li>
-
-                <li className="cursor-pointer hover:text-blue-600">
-                    ⚙️ Settings
-                </li>
-
-            </ul>
-
-        </div>
-
-    );
-
+        <li className="cursor-pointer hover:text-blue-600 transition">
+          ⚙️ Settings
+        </li>
+      </ul>
+    </div>
+  );
 }
 
 export default Sidebar;

@@ -1,435 +1,219 @@
 // ==========================================================
 // DATABASE CONNECTION
 // ==========================================================
-
 const db = require("../config/db");
-
 
 // ==========================================================
 // GET DASHBOARD STATISTICS
 // Returns important hospital statistics
 // ==========================================================
-
 const getDashboardStats = async (req, res) => {
-
-    try {
-
-        // ==========================================================
-        // GET TOTAL PATIENTS
-        // ==========================================================
-
-        const patientsResult = await db.query(
-            `
-            SELECT COUNT(*) AS total_patients
-            FROM patients;
-            `
-        );
-
-
-        // ==========================================================
-        // GET TOTAL DOCTORS
-        // ==========================================================
-
-        const doctorsResult = await db.query(
-            `
-            SELECT COUNT(*) AS total_doctors
-            FROM doctors;
-            `
-        );
-
-
-        // ==========================================================
-        // GET TOTAL APPOINTMENTS
-        // ==========================================================
-
-        const appointmentsResult = await db.query(
-            `
-            SELECT COUNT(*) AS total_appointments
-            FROM appointments;
-            `
-        );
-
-
-        // ==========================================================
-        // GET TODAY'S APPOINTMENTS
-        // ==========================================================
-
-        const todayAppointmentsResult = await db.query(
-            `
-            SELECT COUNT(*) AS today_appointments
-            FROM appointments
-            WHERE appointment_date = CURRENT_DATE;
-            `
-        );
-
-
-        // ==========================================================
-        // GET UPCOMING APPOINTMENTS
-        // ==========================================================
-
-        const upcomingAppointmentsResult = await db.query(
-            `
-            SELECT COUNT(*) AS upcoming_appointments
-            FROM appointments
-            WHERE appointment_date >= CURRENT_DATE
-            AND status NOT IN ('Completed', 'Cancelled');
-            `
-        );
-
-
-        // ==========================================================
-        // GET TOTAL ADMISSIONS
-        // ==========================================================
-
-        const admissionsResult = await db.query(
-            `
-            SELECT COUNT(*) AS total_admissions
-            FROM admissions;
-            `
-        );
-
-
-        // ==========================================================
-        // GET ACTIVE ADMISSIONS
-        // Only currently admitted patients
-        // ==========================================================
-
-        const activeAdmissionsResult = await db.query(
-            `
-            SELECT COUNT(*) AS active_admissions
-            FROM admissions
-            WHERE status = 'Admitted';
-            `
-        );
-
-
-        // ==========================================================
-        // GET OCCUPIED BEDS
-        // ==========================================================
-
-        const occupiedBedsResult = await db.query(
-            `
-            SELECT COUNT(*) AS occupied_beds
-            FROM beds
-            WHERE status = 'Occupied';
-            `
-        );
-
-
-        // ==========================================================
-        // GET AVAILABLE BEDS
-        // ==========================================================
-
-        const availableBedsResult = await db.query(
-            `
-            SELECT COUNT(*) AS available_beds
-            FROM beds
-            WHERE status = 'Available';
-            `
-        );
-
-
-        // ==========================================================
-        // GET RECENT PATIENTS
-        // Latest 5 patients
-        // ==========================================================
-
-        const recentPatientsResult = await db.query(
-            `
-            SELECT *
-            FROM patients
-            ORDER BY created_at DESC
-            LIMIT 5;
-            `
-        );
-
-
-        // ==========================================================
-        // SEND DASHBOARD DATA
-        // ==========================================================
-
-        res.status(200).json({
-
-            statistics: {
-
-                // ==================================================
-                // PATIENT STATISTICS
-                // ==================================================
-
-                totalPatients:
-                    Number(
-                        patientsResult.rows[0].total_patients
-                    ),
-
-
-                // ==================================================
-                // DOCTOR STATISTICS
-                // ==================================================
-
-                totalDoctors:
-                    Number(
-                        doctorsResult.rows[0].total_doctors
-                    ),
-
-
-                // ==================================================
-                // APPOINTMENT STATISTICS
-                // ==================================================
-
-                totalAppointments:
-                    Number(
-                        appointmentsResult.rows[0].total_appointments
-                    ),
-
-
-                todayAppointments:
-                    Number(
-                        todayAppointmentsResult.rows[0].today_appointments
-                    ),
-
-
-                upcomingAppointments:
-                    Number(
-                        upcomingAppointmentsResult.rows[0].upcoming_appointments
-                    ),
-
-
-                // ==================================================
-                // ADMISSION STATISTICS
-                // ==================================================
-
-                totalAdmissions:
-                    Number(
-                        admissionsResult.rows[0].total_admissions
-                    ),
-
-
-                activeAdmissions:
-                    Number(
-                        activeAdmissionsResult.rows[0].active_admissions
-                    ),
-
-
-                // ==================================================
-                // BED STATISTICS
-                // ==================================================
-
-                occupiedBeds:
-                    Number(
-                        occupiedBedsResult.rows[0].occupied_beds
-                    ),
-
-
-                availableBeds:
-                    Number(
-                        availableBedsResult.rows[0].available_beds
-                    )
-
-            },
-
-
-            // ======================================================
-            // RECENT PATIENTS
-            // ======================================================
-
-            recentPatients:
-                recentPatientsResult.rows
-
-        });
-
-    }
-
-
-    // ==========================================================
-    // ERROR HANDLING
-    // ==========================================================
-
-   catch (error) {
-
-        console.error(
-            "[Dashboard Error]:",
-            error
-        );
-
-        res.status(500).json({
-
-            error: "Failed to fetch dashboard statistics"
-
-        });
-
-    }
-
+  try {
+    const patientsResult = await db.query(
+      `SELECT COUNT(*) AS total_patients FROM patients;`
+    );
+
+    const doctorsResult = await db.query(
+      `SELECT COUNT(*) AS total_doctors FROM doctors;`
+    );
+
+    const appointmentsResult = await db.query(
+      `SELECT COUNT(*) AS total_appointments FROM appointments;`
+    );
+
+    // Counts ALL appointments scheduled for today
+    const todayAppointmentsResult = await db.query(
+      `SELECT COUNT(*) AS today_appointments 
+       FROM appointments 
+       WHERE appointment_date = CURRENT_DATE;`
+    );
+
+    // Counts upcoming appointments excluding Completed and Cancelled
+    const upcomingAppointmentsResult = await db.query(
+      `SELECT COUNT(*) AS upcoming_appointments 
+       FROM appointments 
+       WHERE appointment_date > CURRENT_DATE 
+       AND status NOT IN ('Completed', 'Cancelled');`
+    );
+
+    const admissionsResult = await db.query(
+      `SELECT COUNT(*) AS total_admissions FROM admissions;`
+    );
+
+    const activeAdmissionsResult = await db.query(
+      `SELECT COUNT(*) AS active_admissions 
+       FROM admissions 
+       WHERE status = 'Admitted';`
+    );
+
+    const occupiedBedsResult = await db.query(
+      `SELECT COUNT(*) AS occupied_beds 
+       FROM beds 
+       WHERE status = 'Occupied';`
+    );
+
+    const availableBedsResult = await db.query(
+      `SELECT COUNT(*) AS available_beds 
+       FROM beds 
+       WHERE status = 'Available';`
+    );
+
+    const recentPatientsResult = await db.query(
+      `SELECT id, patient_name, age, gender, created_at 
+       FROM patients 
+       ORDER BY created_at DESC 
+       LIMIT 5;`
+    );
+
+    res.status(200).json({
+      statistics: {
+        totalPatients: Number(patientsResult.rows[0].total_patients),
+        totalDoctors: Number(doctorsResult.rows[0].total_doctors),
+        totalAppointments: Number(appointmentsResult.rows[0].total_appointments),
+        todayAppointments: Number(todayAppointmentsResult.rows[0].today_appointments),
+        upcomingAppointments: Number(upcomingAppointmentsResult.rows[0].upcoming_appointments),
+        totalAdmissions: Number(admissionsResult.rows[0].total_admissions),
+        activeAdmissions: Number(activeAdmissionsResult.rows[0].active_admissions),
+        occupiedBeds: Number(occupiedBedsResult.rows[0].occupied_beds),
+        availableBeds: Number(availableBedsResult.rows[0].available_beds)
+      },
+      recentPatients: recentPatientsResult.rows
+    });
+  } catch (error) {
+    console.error("[Dashboard Error]:", error);
+    res.status(500).json({ error: "Failed to fetch dashboard statistics" });
+  }
 };
 
 // ==========================================================
 // GET TODAY'S APPOINTMENTS
-// Returns all appointments scheduled for today
+// Returns ALL appointments scheduled for today (Scheduled, Completed, Cancelled)
 // ==========================================================
-
 const getTodayAppointments = async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT 
+          appointments.id,
+          appointments.appointment_date,
+          appointments.appointment_time,
+          appointments.reason,
+          appointments.status,
+          patients.patient_name,
+          doctors.doctor_name,
+          doctors.specialization
+       FROM appointments
+       LEFT JOIN patients ON appointments.patient_id = patients.id
+       LEFT JOIN doctors ON appointments.doctor_id = doctors.id
+       WHERE appointments.appointment_date = CURRENT_DATE
+       ORDER BY appointments.appointment_time ASC;`
+    );
 
-    try {
-
-        // ==========================================================
-        // GET TODAY'S APPOINTMENTS
-        // JOIN PATIENTS AND DOCTORS
-        // ==========================================================
-
-        const result = await db.query(
-            `
-            SELECT
-                appointments.id,
-                appointments.appointment_date,
-                appointments.appointment_time,
-                appointments.reason,
-                appointments.status,
-
-                patients.patient_name,
-
-                doctors.doctor_name,
-                doctors.specialization
-
-            FROM appointments
-
-            LEFT JOIN patients
-                ON appointments.patient_id = patients.id
-
-            LEFT JOIN doctors
-                ON appointments.doctor_id = doctors.id
-
-            WHERE appointments.appointment_date = CURRENT_DATE
-
-            ORDER BY appointments.appointment_time ASC;
-            `
-        );
-
-
-        // ==========================================================
-        // SEND RESPONSE
-        // ==========================================================
-
-        res.status(200).json({
-
-            appointments: result.rows
-
-        });
-
-    }
-
-
-    // ==========================================================
-    // ERROR HANDLING
-    // ==========================================================
-
-    catch (error) {
-
-        console.error(
-            "[Today's Appointments Error]:",
-            error
-        );
-
-
-        res.status(500).json({
-
-            error: "Failed to fetch today's appointments"
-
-        });
-
-    }
-
+    res.status(200).json({ appointments: result.rows });
+  } catch (error) {
+    console.error("[Today's Appointments Error]:", error);
+    res.status(500).json({ error: "Failed to fetch today's appointments" });
+  }
 };
 
 // ==========================================================
 // GET UPCOMING APPOINTMENTS
-// Returns appointments scheduled after today
+// Returns pending upcoming appointments scheduled after today
 // ==========================================================
-
 const getUpcomingAppointments = async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT 
+          appointments.id,
+          appointments.appointment_date,
+          appointments.appointment_time,
+          appointments.reason,
+          appointments.status,
+          patients.patient_name,
+          doctors.doctor_name,
+          doctors.specialization
+       FROM appointments
+       LEFT JOIN patients ON appointments.patient_id = patients.id
+       LEFT JOIN doctors ON appointments.doctor_id = doctors.id
+       WHERE appointments.appointment_date > CURRENT_DATE
+       AND appointments.status NOT IN ('Completed', 'Cancelled')
+       ORDER BY appointments.appointment_date ASC, appointments.appointment_time ASC;`
+    );
 
-    try {
+    res.status(200).json({ appointments: result.rows });
+  } catch (error) {
+    console.error("[Upcoming Appointments Error]:", error);
+    res.status(500).json({ error: "Failed to fetch upcoming appointments" });
+  }
+};
 
-        // ==========================================================
-        // GET UPCOMING APPOINTMENTS
-        // ==========================================================
+// ==========================================================
+// GET BED OCCUPANCY SUMMARY
+// Aggregates total, occupied, and available beds
+// ==========================================================
+const getBedOccupancySummary = async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT 
+          COALESCE(bed_type, 'General Ward') AS ward_name,
+          COUNT(*) AS total_beds,
+          COUNT(CASE WHEN status = 'Occupied' THEN 1 END) AS occupied_beds,
+          COUNT(CASE WHEN status = 'Available' THEN 1 END) AS available_beds
+       FROM beds
+       GROUP BY COALESCE(bed_type, 'General Ward')
+       ORDER BY ward_name ASC;`
+    );
 
-        const result = await db.query(
-            `
-            SELECT
-                appointments.id,
-                appointments.appointment_date,
-                appointments.appointment_time,
-                appointments.reason,
-                appointments.status,
+    res.status(200).json({ wardSummary: result.rows });
+  } catch (error) {
+    console.error("[Bed Occupancy Summary Error]:", error);
+    res.status(500).json({ error: "Failed to fetch bed occupancy summary" });
+  }
+};
 
-                patients.patient_name,
+// ==========================================================
+// GET PATIENT TRAFFIC TRENDS
+// Aggregates weekly appointments grouped by day
+// ==========================================================
+const getPatientTrends = async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        TO_CHAR(appointment_date, 'Dy') AS day,
+        COUNT(id) AS count
+      FROM appointments
+      WHERE DATE_TRUNC('week', appointment_date) = DATE_TRUNC('week', NOW())
+      GROUP BY TO_CHAR(appointment_date, 'Dy'), EXTRACT(ISODOW FROM appointment_date)
+      ORDER BY EXTRACT(ISODOW FROM appointment_date) ASC;
+    `;
 
-                doctors.doctor_name,
-                doctors.specialization
+    const result = await db.query(query);
 
-            FROM appointments
+    const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const formattedData = daysOfWeek.map((day) => {
+      const found = result.rows.find(
+        (r) => r.day && r.day.trim().toLowerCase() === day.toLowerCase()
+      );
+      return {
+        day,
+        count: found ? parseInt(found.count, 10) : 0,
+      };
+    });
 
-            LEFT JOIN patients
-                ON appointments.patient_id = patients.id
-
-            LEFT JOIN doctors
-                ON appointments.doctor_id = doctors.id
-
-            WHERE appointments.appointment_date > CURRENT_DATE
-
-            ORDER BY
-                appointments.appointment_date ASC,
-                appointments.appointment_time ASC;
-            `
-        );
-
-
-        // ==========================================================
-        // SEND RESPONSE
-        // ==========================================================
-
-        res.status(200).json({
-
-            appointments: result.rows
-
-        });
-
-    }
-
-
-    // ==========================================================
-    // ERROR HANDLING
-    // ==========================================================
-
-    catch (error) {
-
-        console.error(
-            "[Upcoming Appointments Error]:",
-            error
-        );
-
-
-        res.status(500).json({
-
-            error: "Failed to fetch upcoming appointments"
-
-        });
-
-    }
-
+    res.status(200).json({ trends: formattedData });
+  } catch (error) {
+    console.error("[Patient Trends Error]:", error);
+    res.status(500).json({ error: "Failed to fetch patient trend data" });
+  }
 };
 
 // ==========================================================
 // EXPORT CONTROLLER
 // ==========================================================
-
 module.exports = {
-
-    getDashboardStats,
-
-    getTodayAppointments,
-
-    getUpcomingAppointments,
-    
-
-
+  getDashboardStats,
+  getTodayAppointments,
+  getUpcomingAppointments,
+  getBedOccupancySummary,
+  getPatientTrends,
+  
 };

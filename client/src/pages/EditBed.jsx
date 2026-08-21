@@ -546,45 +546,39 @@ function EditBed() {
                             <div>
 
                                 <label className="block font-medium mb-2">
-
                                     Status
-
                                 </label>
 
-
                                 <select
-
                                     name="status"
-
                                     value={bedData.status}
-
                                     onChange={handleChange}
-
                                     className="w-full border rounded-lg p-3"
-
+                                    disabled={bedData.status === "Occupied"}
                                 >
 
                                     <option value="Available">
-
                                         Available
-
                                     </option>
-
 
                                     <option value="Maintenance">
-
                                         Maintenance
-
                                     </option>
 
-
-                                    <option value="Occupied">
-
-                                        Occupied
-
-                                    </option>
+                                    {bedData.status === "Occupied" && (
+                                        <option value="Occupied">
+                                            Occupied
+                                        </option>
+                                    )}
 
                                 </select>
+
+                                {bedData.status === "Occupied" && (
+                                    <p className="text-sm text-gray-500 mt-2">
+                                        Occupied beds cannot be changed manually.
+                                        Use "Release Bed" to make this bed available.
+                                    </p>
+                                )}
 
                             </div>
 

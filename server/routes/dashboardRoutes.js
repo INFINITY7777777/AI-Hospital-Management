@@ -30,7 +30,12 @@ const {
 
     getTodayAppointments,
 
-    getUpcomingAppointments
+    getUpcomingAppointments,
+
+    getBedOccupancySummary,
+
+    getPatientTrends,
+    
 
 } = require("../controllers/dashboardController");
 
@@ -97,6 +102,34 @@ router.get(
     authorizeRoles(...dashboardRoles),
 
     getUpcomingAppointments
+
+);
+
+
+// ==========================================================
+// PATIENT TRAFFIC TRENDS
+// ==========================================================
+router.get(
+  "/patient-trends",
+  verifyToken,
+  authorizeRoles(...dashboardRoles),
+  getPatientTrends
+);
+
+
+// ==========================================================
+// BED OCCUPANCY SUMMARY
+// ==========================================================
+
+router.get(
+
+    "/bed-summary",
+
+    verifyToken,
+
+    authorizeRoles(...dashboardRoles),
+
+    getBedOccupancySummary
 
 );
 

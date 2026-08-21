@@ -195,6 +195,132 @@ const getPatientMedicalHistory = async (req, res) => {
 
 };
 
+// ==========================================================
+// GET PATIENT STAY HISTORY
+// GET /api/patient-history/patient/:patientId/stays
+// ==========================================================
+
+const getPatientStayHistory = async (req, res) => {
+
+    try {
+
+        // ======================================================
+        // GET PATIENT ID
+        // ======================================================
+
+        const { patientId } = req.params;
+
+
+        // ======================================================
+        // CHECK PATIENT EXISTS
+        // ======================================================
+
+        const patientResult = await db.query(
+
+            `
+            SELECT
+                id,
+                patient_name
+            FROM patients
+            WHERE id = $1
+            `,
+
+            [patientId]
+
+        );
+
+
+        // ======================================================
+        // PATIENT NOT FOUND
+        // ======================================================
+
+        if (patientResult.rows.length === 0) {
+
+            return res.status(404).json({
+
+                error: "Patient not found"
+
+            });
+
+        }
+
+
+        // ======================================================
+        // GET STAY HISTORY
+        // ======================================================
+
+        const stayResult = await db.query(
+
+            `
+            SELECT
+
+                psh.id,
+                psh.patient_id,
+                psh.admission_id,
+                psh.bed_id,
+
+                psh.ward,
+                psh.bed_number,
+
+                psh.start_date,
+                psh.end_date,
+
+                psh.status,
+
+                psh.created_at,
+                psh.updated_at
+
+            FROM patient_stay_history psh
+
+            WHERE psh.patient_id = $1
+
+            ORDER BY
+                psh.start_date DESC,
+                psh.id DESC
+            `,
+
+            [patientId]
+
+        );
+
+
+        // ======================================================
+        // SUCCESS
+        // ======================================================
+
+        return res.status(200).json({
+
+            success: true,
+
+            patient: patientResult.rows[0],
+
+            stays: stayResult.rows
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+
+            "[Patient Stay History Error]:",
+
+            error
+
+        );
+
+
+        return res.status(500).json({
+
+            error: "Failed to fetch patient stay history"
+
+        });
+
+    }
+
+};
+
 
 // ==========================================================
 // EXPORT
@@ -202,6 +328,8 @@ const getPatientMedicalHistory = async (req, res) => {
 
 module.exports = {
 
-    getPatientMedicalHistory
+    getPatientMedicalHistory,
+    getPatientStayHistory,
+    
 
 };

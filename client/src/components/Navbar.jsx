@@ -1,15 +1,20 @@
 // ==========================================================
 // NAVBAR COMPONENT
-// Displays the application title and logged-in user.
+// Displays the application title, notification bell, and logout option.
 // ==========================================================
 
 // Used to redirect the user
 import { useNavigate } from "react-router-dom";
 
+// Used for real-time notification alerts
+import NotificationBell from "./NotificationBell";
+
+
 function Navbar() {
 
     // Use for page navigation
     const navigate = useNavigate(); 
+
 
     // ==========================================================
     // LOGOUT FUNCTION
@@ -23,7 +28,9 @@ function Navbar() {
 
         // Redirects to the Login Page
         navigate("/");
+
     };
+
 
     return (
 
@@ -34,12 +41,23 @@ function Navbar() {
                 🏥 Hospital Management System
             </h1>
 
-            <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg font-medium transition"
-            >
-                Logout
-            </button>
+
+            {/* Right Container: Notifications & Actions */}
+            <div className="flex items-center gap-6">
+
+                {/* Notification Bell Component */}
+                <NotificationBell />
+
+
+                {/* Logout Button */}
+                <button
+                    onClick={handleLogout}
+                    className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg font-medium transition"
+                >
+                    Logout
+                </button>
+
+            </div>
 
         </nav>
 
