@@ -50,8 +50,15 @@ const clinicalNoteRoutes = require("./routes/clinicalNoteRoutes");
 // Patient History Routes
 const patientHistoryRoutes = require("./routes/patientHistoryRoutes");
 
+// Pharmacy Routes
+const pharmacyRoutes = require("./routes/pharmacyRoutes");
+
+// Settings Routes
+const settingsRoutes = require("./routes/settingsRoutes");
+
 // Notification Routes
 const notificationRoutes = require("./routes/notificationRoutes");
+
 
 // JWT Authentication Middleware
 const {
@@ -108,6 +115,12 @@ app.use("/api/clinical-notes", clinicalNoteRoutes);
 
 // Patient History APIs
 app.use("/api/patient-history", patientHistoryRoutes);
+
+// Pharmacy Routes
+app.use("/api/pharmacy", pharmacyRoutes);
+
+// Settings Routes
+app.use("/api/settings", settingsRoutes);
 
 // Notification APIs
 app.use("/api/notifications", notificationRoutes);

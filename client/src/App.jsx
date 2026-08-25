@@ -76,6 +76,18 @@ import AdmissionDetails from "./pages/AdmissionDetails";
 import EditAdmission from "./pages/EditAdmission";
 
 // ==========================================================
+// PHARMACY PAGE
+// ==========================================================
+
+import Pharmacy from "./pages/Pharmacy";
+
+// ==========================================================
+// SETTINGS PAGE
+// ==========================================================
+
+import Settings from "./pages/Settings";
+
+// ==========================================================
 // NOTIFICATION PAGE
 // ==========================================================
 import Notifications from "./pages/Notifications";
@@ -238,6 +250,24 @@ function App() {
                 <Route
                     path="/admissions/:id/edit"
                     element={<EditAdmission />}
+                />
+
+                {/* ==========================================================
+                    PHARMACY
+                ========================================================== */}
+
+                <Route 
+                    path="/pharmacy" 
+                    element={<Pharmacy />} 
+                />
+
+                {/* ==========================================================
+                    SETTINGS
+                ========================================================== */}
+                
+                <Route 
+                    path="/settings" 
+                    element={<Settings />} 
                 />
 
                 {/* ==========================================================

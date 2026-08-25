@@ -94,10 +94,12 @@ b12b301  01 Aug 2026       Complete patient CRUD create read and update
 **Frontend** — list, add, details, edit, delete
 
 ### 3.5 Dashboard
-**Backend** — `/api/dashboard/stats`, `/today-appointments`, `/upcoming-appointments`
-- Total/admitted patients, total doctors, appointment counts, today's + upcoming appointments, total/active admissions, occupied/available beds, recent patients
+**Backend** — `/api/dashboard/stats`, `/today-appointments`, `/upcoming-appointments`, `/patient-trends`
+- Total/admitted patients, total doctors, appointment counts, today's + upcoming appointments, occupied/available beds, recent patients.
+- **NEW:** `/patient-trends` aggregates weekly appointments using PostgreSQL `DATE_TRUNC` and `TO_CHAR` for active weekly visualization.
 
-**Frontend** — stat cards + appointment overview
+**Frontend** — stat cards, appointment overview, and native interactive SVG `PatientTrendChart`.
+
 
 ### 3.6 Bed Management
 **Backend**
@@ -137,6 +139,22 @@ b12b301  01 Aug 2026       Complete patient CRUD create read and update
 ### 3.11 Notifications (backend + frontend — see WIP section)
 Full notification + polling system implemented in the working tree (untracked). Details in section 4.
 
+### 3.12 Pharmacy Management
+**Backend** — `/api/pharmacy`
+- Full CRUD for medicine inventory (name, category, stock_quantity, unit_price, expiry_date).
+- Role-restricted deletion (Admin only).
+
+**Frontend** — `Pharmacy.jsx`
+- Real-time stock status badges, add medicine form, delete action.
+- ESLint React 19-compliant data-fetching using `useCallback` and `isMounted` state guards.
+
+### 3.13 Settings Management
+**Backend** — `/api/settings`
+- Auto-initialization and updating of `user_settings` table (hospital_name, notifications_enabled, theme_preference).
+
+**Frontend** — `Settings.jsx`
+- Configuration portal for user/system preferences.
+
 ---
 
 ## 4. WORK IN PROGRESS (uncommitted changes since `e827bab`)
@@ -160,6 +178,14 @@ Files changed/added but NOT committed. Review + commit as one feature batch.
 | `client/src/pages/Register.jsx` | MODIFIED | Full staff registration form |
 | `client/src/components/ClinicalNotes.jsx` | MODIFIED | Completed notes frontend (add/edit/delete) |
 | `HOSPITAL_MANAGEMENT_PROJECT_LOG_2026-08-11.md` | MODIFIED | This file |
+| `server/controllers/pharmacyController.js`	| NEW	| Pharmacy CRUD engine|
+| `server/routes/pharmacyRoutes.js`	| NEW	| Pharmacy routes with auth|
+| `server/controllers/settingsController.js`	| NEW	| User settings engine|
+| `server/routes/settingsRoutes.js`	| NEW	| Settings routes with auth|
+| `client/src/pages/Pharmacy.jsx`	| NEW	| React 19 compliant Pharmacy UI|
+| `client/src/pages/Settings.jsx`	| NEW	| Settings UI|
+| `client/src/App.jsx` |	MODIFIED	| Registered /pharmacy and /settings routes|
+| `server/index.js`	| MODIFIED |	Mounted /api/pharmacy and /api/settings|
 
 ### Notifications & Polling — detailed spec
 
@@ -252,6 +278,7 @@ Routes (all protected by `verifyToken` + `authorizeRoles("admin","doctor","staff
 - [x] Digital Patient Card frontend
 - [x] Patient search / filter / sort
 - [x] Notifications + polling (backend + frontend) — UNCOMMITTED, see section 4
+- [x] Patient Traffic Trends PostgreSQL API + SVG Chart Component
 
 **WORK IN PROGRESS (uncommitted)**
 - [x] Commit notification system + related WIP batch

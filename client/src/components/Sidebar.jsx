@@ -45,7 +45,12 @@ function Sidebar() {
         </li>
 
         <li className="cursor-pointer hover:text-blue-600 transition">
-          💊 Pharmacy
+          <Link
+            to="/pharmacy"
+            className="block hover:text-blue-600 transition"
+          >
+            💊 Pharmacy
+          </Link>
         </li>
 
         <li>
@@ -67,7 +72,12 @@ function Sidebar() {
         </li>
 
         <li className="cursor-pointer hover:text-blue-600 transition">
-          ⚙️ Settings
+          <Link
+            to="/settings"
+            className="block hover:text-blue-600 transition"
+          >
+            ⚙️ Settings
+          </Link>
         </li>
       </ul>
     </div>

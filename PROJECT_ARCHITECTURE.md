@@ -44,6 +44,27 @@ Dashboard.jsx
   → db.query("SELECT COUNT(*) FROM beds WHERE status='Available'")
 ```
 
+### Under ## Dashboard section in PROJECT_ARCHITECTURE.md
+
+**Routes & Endpoints:**
+- `GET /api/dashboard/stats` - dashboard statistics
+- `GET /api/dashboard/today-appointments` - today's appointments
+- `GET /api/dashboard/upcoming-appointments` - upcoming appointments
+- `GET /api/dashboard/patient-trends` - weekly patient traffic trends (NEW)
+
+**Backend Controllers & Routes:**
+- `dashboardRoutes.js`: `/api/dashboard/stats`, `/api/dashboard/today-appointments`, `/api/dashboard/upcoming-appointments`, `/api/dashboard/patient-trends`
+- `dashboardController.js`: `getDashboardStats`, `getTodayAppointments`, `getUpcomingAppointments`, `getPatientTrends`
+- Models: `patients`, `doctors`, `appointments`, `admissions`, `beds` tables
+
+**Dependency Map (Updated):**
+Dashboard.jsx
+  → PatientTrendChart.jsx
+    → axios.get("http://localhost:5000/api/dashboard/patient-trends")
+    → dashboardController.getPatientTrends
+    → db.query("SELECT TO_CHAR(appointment_date, 'Dy')... GROUP BY DATE_TRUNC('week')")
+
+    
 ---
 
 ## Patients
@@ -180,6 +201,41 @@ Admissions.jsx
 ```
 
 ---
+## Pharmacy
+
+**Page Component:** `client/src/pages/Pharmacy.jsx`
+
+**UI Components:** Navbar, Sidebar
+
+**Routes & Endpoints:**
+- `GET /api/pharmacy` - list all medicine inventory
+- `POST /api/pharmacy` - add new medicine item
+- `PUT /api/pharmacy/:id` - update medicine details/stock
+- `DELETE /api/pharmacy/:id` - remove medicine item (admin only)
+
+**Backend Controllers & Routes:**
+- `pharmacyRoutes.js`: `/`, `/`, `/:id`, `/:id`
+- `pharmacyController.js`: `getMedicines`, `addMedicine`, `updateMedicine`, `deleteMedicine`
+- Models: `medicines` table
+
+---
+
+## Settings
+
+**Page Component:** `client/src/pages/Settings.jsx`
+
+**UI Components:** Navbar, Sidebar
+
+**Routes & Endpoints:**
+- `GET /api/settings` - get current user system settings
+- `PUT /api/settings` - update system settings
+
+**Backend Controllers & Routes:**
+- `settingsRoutes.js`: `/`, `/`
+- `settingsController.js`: `getSettings`, `updateSettings`
+- Models: `user_settings` table
+
+
 
 ## Beds
 
