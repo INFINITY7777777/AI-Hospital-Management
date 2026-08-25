@@ -4,361 +4,129 @@
 
 const jwt = require("jsonwebtoken");
 
-
 // ==========================================================
 // VERIFY JWT TOKEN
 // ==========================================================
 
 const verifyToken = (req, res, next) => {
-
-    try {
-
-        // ======================================================
-        // GET AUTHORIZATION HEADER
-        // ======================================================
-
-        const authHeader = req.headers.authorization;
-
-
-        // ======================================================
-        // CHECK TOKEN EXISTS
-        // ======================================================
-
-        if (!authHeader) {
-
-            return res.status(401).json({
-
-                error:
-                    "Access denied. Authentication token is required."
-
-            });
-
-        }
-
-
-        // ======================================================
-        // CHECK BEARER FORMAT
-        // ======================================================
-
-        if (!authHeader.startsWith("Bearer ")) {
-
-            return res.status(401).json({
-
-                error:
-                    "Invalid authorization format."
-
-            });
-
-        }
-
-
-        // ======================================================
-        // EXTRACT TOKEN
-        // ======================================================
-
-        const token = authHeader.substring(7).trim();
-
-
-        // ======================================================
-        // CHECK TOKEN EXISTS
-        // ======================================================
-
-        if (!token) {
-
-            return res.status(401).json({
-
-                error:
-                    "Authentication token is missing."
-
-            });
-
-        }
-
-
-        // ======================================================
-        // CHECK JWT SECRET
-        // ======================================================
-
-        if (!process.env.JWT_SECRET) {
-
-            console.error(
-                "[AUTH ERROR]: JWT_SECRET is not configured."
-            );
-
-            return res.status(500).json({
-
-                error:
-                    "Server authentication configuration is missing."
-
-            });
-
-        }
-
-
-        // ======================================================
-        // VERIFY JWT
-        // ======================================================
-
-        const decoded = jwt.verify(
-
-            token,
-
-            process.env.JWT_SECRET
-
-        );
-
-
-        // ======================================================
-        // CHECK USER ID
-        // ======================================================
-
-        if (!decoded.id) {
-
-            return res.status(401).json({
-
-                error:
-                    "Invalid authentication token."
-
-            });
-
-        }
-
-
-        // ======================================================
-        // NORMALIZE ROLE
-        // ======================================================
-
-        const normalizedRole = decoded.role
-
-            ? String(decoded.role)
-                .toLowerCase()
-                .trim()
-
-            : "";
-
-
-        // ======================================================
-        // CHECK ROLE
-        // ======================================================
-
-        if (!normalizedRole) {
-
-            return res.status(401).json({
-
-                error:
-                    "Authentication token does not contain a valid role."
-
-            });
-
-        }
-
-
-        // ======================================================
-        // STORE USER INFORMATION
-        // ======================================================
-
-        req.user = {
-
-            id: decoded.id,
-
-            role: normalizedRole
-
-        };
-
-
-        // ======================================================
-        // DEBUG
-        // ======================================================
-
-        console.log(
-
-            "[AUTH CHECK] User:",
-            req.user.id,
-            "| Role:",
-            req.user.role
-
-        );
-
-
-        // ======================================================
-        // CONTINUE
-        // ======================================================
-
-        next();
-
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({
+        error: "Access denied. Authentication token is required."
+      });
     }
 
-
-    // ==========================================================
-    // JWT EXPIRED
-    // ==========================================================
-
-    catch (error) {
-
-        console.error(
-
-            "[AUTH ERROR]:",
-            error.name,
-            "|",
-            error.message
-
-        );
-
-
-        // ======================================================
-        // EXPIRED TOKEN
-        // ======================================================
-
-        if (error.name === "TokenExpiredError") {
-
-            return res.status(401).json({
-
-                error:
-                    "Authentication token has expired. Please log in again.",
-
-                code:
-                    "TOKEN_EXPIRED"
-
-            });
-
-        }
-
-
-        // ======================================================
-        // INVALID TOKEN
-        // ======================================================
-
-        if (error.name === "JsonWebTokenError") {
-
-            return res.status(401).json({
-
-                error:
-                    "Invalid authentication token.",
-
-                code:
-                    "INVALID_TOKEN"
-
-            });
-
-        }
-
-
-        // ======================================================
-        // OTHER JWT ERROR
-        // ======================================================
-
-        return res.status(401).json({
-
-            error:
-                "Authentication failed.",
-
-            code:
-                "AUTHENTICATION_FAILED"
-
-        });
-
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        error: "Invalid authorization format."
+      });
     }
 
+    const token = authHeader.substring(7).trim();
+
+    if (!token) {
+      return res.status(401).json({
+        error: "Authentication token is missing."
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error("[AUTH ERROR]: JWT_SECRET is not configured.");
+      return res.status(500).json({
+        error: "Server authentication configuration is missing."
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded.id) {
+      return res.status(401).json({
+        error: "Invalid authentication token."
+      });
+    }
+
+    const normalizedRole = decoded.role
+      ? String(decoded.role).toLowerCase().trim()
+      : "";
+
+    if (!normalizedRole) {
+      return res.status(401).json({
+        error: "Authentication token does not contain a valid role."
+      });
+    }
+
+    req.user = {
+      id: decoded.id,
+      role: normalizedRole
+    };
+
+    console.log("[AUTH CHECK] User:", req.user.id, "| Role:", req.user.role);
+
+    next();
+  } catch (error) {
+    console.error("[AUTH ERROR]:", error.name, "|", error.message);
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        error: "Authentication token has expired. Please log in again.",
+        code: "TOKEN_EXPIRED"
+      });
+    }
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        error: "Invalid authentication token.",
+        code: "INVALID_TOKEN"
+      });
+    }
+
+    return res.status(401).json({
+      error: "Authentication failed.",
+      code: "AUTHENTICATION_FAILED"
+    });
+  }
 };
-
 
 // ==========================================================
 // ROLE AUTHORIZATION
 // ==========================================================
 
 const authorizeRoles = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        error: "Authentication required."
+      });
+    }
 
-    return (req, res, next) => {
+    // .flat() handles both array input ['admin', 'doctor'] and comma input 'admin', 'doctor'
+    const normalizedAllowedRoles = allowedRoles
+      .flat()
+      .map((role) => String(role).toLowerCase().trim());
 
-        // ======================================================
-        // CHECK AUTHENTICATION
-        // ======================================================
+    console.log(
+      "[ROLE CHECK]",
+      "User:",
+      req.user.id,
+      "| Role:",
+      req.user.role,
+      "| Allowed:",
+      normalizedAllowedRoles
+    );
 
-        if (!req.user) {
+    if (!normalizedAllowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        error: "You do not have permission to perform this action."
+      });
+    }
 
-            return res.status(401).json({
-
-                error:
-                    "Authentication required."
-
-            });
-
-        }
-
-
-        // ======================================================
-        // NORMALIZE ALLOWED ROLES
-        // ======================================================
-
-        const normalizedAllowedRoles = allowedRoles.map(
-
-            (role) =>
-                String(role)
-                    .toLowerCase()
-                    .trim()
-
-        );
-
-
-        // ======================================================
-        // DEBUG
-        // ======================================================
-
-        console.log(
-
-            "[ROLE CHECK]",
-
-            "User:",
-            req.user.id,
-
-            "| Role:",
-            req.user.role,
-
-            "| Allowed:",
-            normalizedAllowedRoles
-
-        );
-
-
-        // ======================================================
-        // CHECK ROLE
-        // ======================================================
-
-        if (
-            !normalizedAllowedRoles.includes(
-                req.user.role
-            )
-        ) {
-
-            return res.status(403).json({
-
-                error:
-                    "You do not have permission to perform this action."
-
-            });
-
-        }
-
-
-        // ======================================================
-        // ROLE ACCEPTED
-        // ======================================================
-
-        next();
-
-    };
-
+    next();
+  };
 };
 
-
-// ==========================================================
-// EXPORT
-// ==========================================================
-
 module.exports = {
-
-    verifyToken,
-
-    authorizeRoles
-
+  verifyToken,
+  authorizeRoles
 };
