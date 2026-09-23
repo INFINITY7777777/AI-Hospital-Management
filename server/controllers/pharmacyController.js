@@ -20,7 +20,7 @@ const addMedicine = async (req, res) => {
     const result = await db.query(
       `INSERT INTO medicines (name, category, stock_quantity, unit_price, expiry_date)
        VALUES ($1, $2, $3, $4, $5) RETURNING *;`,
-      [name, category, stock_quantity, unit_price, expiry_date]
+      [name, category, stock_quantity, unit_price, expiry_date || null]
     );
     res.status(201).json({ medicine: result.rows[0] });
   } catch (error) {
@@ -38,7 +38,7 @@ const updateMedicine = async (req, res) => {
       `UPDATE medicines 
        SET name = $1, category = $2, stock_quantity = $3, unit_price = $4, expiry_date = $5
        WHERE id = $6 RETURNING *;`,
-      [name, category, stock_quantity, unit_price, expiry_date, id]
+      [name, category, stock_quantity, unit_price, expiry_date || null, id]
     );
     res.status(200).json({ medicine: result.rows[0] });
   } catch (error) {
@@ -59,9 +59,45 @@ const deleteMedicine = async (req, res) => {
   }
 };
 
+// Deduct medicine stock for Clinical Notes prescription
+const deductStock = async (req, res) => {
+  const { medicine_id, quantity } = req.body;
+  try {
+    const checkStock = await db.query(
+      "SELECT stock_quantity FROM medicines WHERE id = $1;",
+      [medicine_id]
+    );
+
+    if (checkStock.rows.length === 0) {
+      return res.status(404).json({ error: "Medicine not found" });
+    }
+
+    const currentStock = checkStock.rows[0].stock_quantity;
+    if (currentStock < quantity) {
+      return res.status(400).json({ error: `Insufficient stock! Current stock: ${currentStock}` });
+    }
+
+    const result = await db.query(
+      `UPDATE medicines 
+       SET stock_quantity = stock_quantity - $1 
+       WHERE id = $2 RETURNING *;`,
+      [quantity, medicine_id]
+    );
+
+    res.status(200).json({ 
+      message: "Stock deducted successfully", 
+      medicine: result.rows[0] 
+    });
+  } catch (error) {
+    console.error("[Pharmacy Deduct Error]:", error);
+    res.status(500).json({ error: "Failed to deduct medicine stock" });
+  }
+};
+
 module.exports = {
   getMedicines,
   addMedicine,
   updateMedicine,
   deleteMedicine,
+  deductStock,
 };

@@ -1,119 +1,70 @@
+const express = require("express");
+const router = express.Router();
+
+const {
+    verifyToken,
+    authorizeRoles
+} = require("../middleware/authMiddleware");
+
+const {
+    addAdmission,
+    getAdmissions,
+    getAdmissionById,
+    updateAdmission,
+    dischargePatient,
+    deleteAdmission
+} = require("../controllers/admissionController");
+
 // ==========================================================
 // ADMISSION ROUTES
 // ==========================================================
 
-const express = require("express");
-
-const router = express.Router();
-
-
-// ==========================================================
-// CONTROLLER IMPORT
-// ==========================================================
-
-const {
-
-    addAdmission,
-
-    getAdmissions,
-
-    getAdmissionById,
-
-    updateAdmission,
-
-    dischargePatient,
-
-    deleteAdmission
-
-} = require("../controllers/admissionController");
-
-
-// ==========================================================
-// CREATE ADMISSION
-// POST /api/admissions
-// ==========================================================
-
+// Create new admission (Admin & Staff)
 router.post(
-
     "/",
-
+    verifyToken,
+    authorizeRoles("admin", "staff"),
     addAdmission
-
 );
 
-
-// ==========================================================
-// GET ALL ADMISSIONS
-// GET /api/admissions
-// ==========================================================
-
+// Get all admissions (Admin, Doctor, Staff)
 router.get(
-
     "/",
-
+    verifyToken,
+    authorizeRoles("admin", "doctor", "staff"),
     getAdmissions
-
 );
 
-
-// ==========================================================
-// GET ADMISSION BY ID
-// GET /api/admissions/:id
-// ==========================================================
-
+// Get single admission by ID (Admin, Doctor, Staff)
 router.get(
-
     "/:id",
-
+    verifyToken,
+    authorizeRoles("admin", "doctor", "staff"),
     getAdmissionById
-
 );
 
-
-// ==========================================================
-// UPDATE ADMISSION
-// PUT /api/admissions/:id
-// ==========================================================
-
+// Update admission details (Admin & Staff)
 router.put(
-
     "/:id",
-
+    verifyToken,
+    authorizeRoles("admin", "staff"),
     updateAdmission
-
 );
 
-
-// ==========================================================
-// DISCHARGE PATIENT
-// PUT /api/admissions/:id/discharge
-// ==========================================================
-
+// Discharge patient (Admin & Staff)
 router.put(
-
     "/:id/discharge",
-
+    verifyToken,
+    authorizeRoles("admin", "staff"),
     dischargePatient
-
 );
 
-
-// ==========================================================
-// DELETE ADMISSION
-// DELETE /api/admissions/:id
-// ==========================================================
-
+// Delete admission (Admin only)
 router.delete(
-
     "/:id",
-
+    verifyToken,
+    authorizeRoles("admin"),
     deleteAdmission
-
 );
-
-
-// ==========================================================
-// EXPORT
-// ==========================================================
 
 module.exports = router;

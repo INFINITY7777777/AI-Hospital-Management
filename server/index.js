@@ -14,6 +14,7 @@ require("dotenv").config();
 require("./config/db");
 
 // API Routes Imports
+const aiRoutes = require("./routes/aiRoutes");
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const patientRoutes = require("./routes/patientRoutes");
@@ -56,6 +57,7 @@ app.use("/api/patient-history", patientHistoryRoutes);
 app.use("/api/pharmacy", pharmacyRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/ai", aiRoutes);
 
 // ========================= TEST & HEALTH ROUTES =========================
 

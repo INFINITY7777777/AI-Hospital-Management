@@ -1,28 +1,14 @@
-// ==========================================================
-// REACT
-// ==========================================================
-
-import { useState } from "react";
-
-// ==========================================================
-// API
-// ==========================================================
-
+import { useState, useEffect } from "react";
 import api from "../services/api";
 
-
-// ==========================================================
-// ADD PATIENT FORM
-// ==========================================================
-
 function AddPatientForm({ onPatientAdded }) {
-
     // ======================================================
-    // FORM STATE
+    // STATE MANAGEMENT
     // ======================================================
+    const [doctors, setDoctors] = useState([]);
+    const [isLoadingDoctors, setIsLoadingDoctors] = useState(false);
 
     const [patientData, setPatientData] = useState({
-
         patientName: "",
         age: "",
         gender: "",
@@ -35,88 +21,89 @@ function AddPatientForm({ onPatientAdded }) {
         bedNumber: "",
         diagnosis: "",
         admissionDate: ""
-
     });
 
+    useEffect(() => {
+        const fetchDoctorsAndSetDefault = async () => {
+            setIsLoadingDoctors(true);
+            try {
+                // 1. Fetch combined doctor list
+                const response = await api.get("/doctors");
+                const doctorList = response.data?.doctors || response.data || [];
+                setDoctors(doctorList);
+
+                // 2. Retrieve logged-in user from localStorage
+                const userString = localStorage.getItem("user");
+                if (userString) {
+                    const currentUser = JSON.parse(userString);
+                    const normalizedRole = String(currentUser.role || "").toLowerCase().trim();
+
+                    if (normalizedRole === "doctor") {
+                        const loggedInName = (currentUser.full_name || currentUser.name || "").toLowerCase().trim();
+                        const loggedInEmail = (currentUser.email || "").toLowerCase().trim();
+
+                        // Find matching doctor in the returned list
+                        const matchedDoc = doctorList.find((doc) => {
+                            const dName = (doc.doctor_name || doc.full_name || doc.name || "").toLowerCase().trim();
+                            const dEmail = (doc.email || "").toLowerCase().trim();
+                            return (loggedInEmail && dEmail === loggedInEmail) || (loggedInName && dName === loggedInName);
+                        });
+
+                        // Set default selected doctor
+                        if (matchedDoc) {
+                            setPatientData((prev) => ({
+                                ...prev,
+                                doctor: matchedDoc.doctor_name || matchedDoc.full_name || matchedDoc.name
+                            }));
+                        } else if (currentUser.full_name || currentUser.name) {
+                            setPatientData((prev) => ({
+                                ...prev,
+                                doctor: currentUser.full_name || currentUser.name
+                            }));
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch doctors list:", error);
+            } finally {
+                setIsLoadingDoctors(false);
+            }
+        };
+
+        fetchDoctorsAndSetDefault();
+    }, []);
 
     // ======================================================
     // HANDLE INPUT CHANGE
     // ======================================================
-
     const handleInputChange = (event) => {
-
         const { name, value } = event.target;
-
         setPatientData((previousData) => ({
-
             ...previousData,
-
             [name]: value
-
         }));
-
     };
-
 
     // ======================================================
     // HANDLE FORM SUBMIT
     // ======================================================
-
     const handleSubmit = async (event) => {
-
         event.preventDefault();
 
-
-        // ==================================================
-        // CHECK TOKEN
-        // ==================================================
-
         const token = localStorage.getItem("token");
-
         if (!token) {
-
-            alert(
-                "You are not logged in. Please login again."
-            );
-
+            alert("You are not logged in. Please login again.");
             return;
-
         }
 
-
         try {
+            const response = await api.post("/patients", patientData);
 
-            // ==================================================
-            // SEND DATA TO BACKEND
-            // ==================================================
+            console.log("Patient added successfully:", response.data);
+            alert("Patient added successfully!");
 
-            const response = await api.post(
-                "/patients",
-                patientData
-            );
-
-
-            console.log(
-                "Patient added successfully:",
-                response.data
-            );
-
-
-            // ==================================================
-            // SUCCESS MESSAGE
-            // ==================================================
-
-            alert(
-                "Patient added successfully!"
-            );
-
-
-            // ==================================================
-            // CLEAR FORM
-            // ==================================================
-
+            // Clear Form Reset
             setPatientData({
-
                 patientName: "",
                 age: "",
                 gender: "",
@@ -129,123 +116,52 @@ function AddPatientForm({ onPatientAdded }) {
                 bedNumber: "",
                 diagnosis: "",
                 admissionDate: ""
-
             });
 
-
-            // ==================================================
-            // REFRESH PATIENT LIST
-            // ==================================================
-
             if (onPatientAdded) {
-
                 onPatientAdded();
-
             }
-
-        }
-
-        catch (error) {
-
-            console.error(
-                "Error adding patient:",
-                error
-            );
-
-            console.error(
-                "Backend response:",
-                error.response?.data
-            );
-
-
-            // ==================================================
-            // UNAUTHORIZED
-            // ==================================================
+        } catch (error) {
+            console.error("Error adding patient:", error);
+            console.error("Backend response:", error.response?.data);
 
             if (error.response?.status === 401) {
-
                 localStorage.removeItem("token");
-
-                alert(
-                    "Your session has expired. Please login again."
-                );
-
+                localStorage.removeItem("user");
+                alert("Your session has expired. Please login again.");
                 return;
-
             }
-
-
-            // ==================================================
-            // FORBIDDEN
-            // ==================================================
 
             if (error.response?.status === 403) {
-
-                alert(
-                    "You do not have permission to add patients."
-                );
-
+                alert("You do not have permission to add patients.");
                 return;
-
             }
 
-
-            // ==================================================
-            // OTHER ERROR
-            // ==================================================
-
-            alert(
-
-                error.response?.data?.error ||
-                "Failed to add patient."
-
-            );
-
+            alert(error.response?.data?.error || "Failed to add patient.");
         }
-
     };
-
 
     // ======================================================
     // UI
     // ======================================================
-
     return (
-
         <form
             onSubmit={handleSubmit}
             className="bg-white rounded-xl shadow p-6 mt-6"
         >
-
-            {/* ==================================================
-                TITLE
-            ================================================== */}
-
             <h2 className="text-2xl font-bold text-gray-900">
                 Add New Patient
             </h2>
-
-
             <p className="text-gray-500 mt-2">
                 Fill in the patient's details below.
             </p>
 
-
-            {/* ==================================================
-                FORM GRID
-            ================================================== */}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-
-
                 {/* PATIENT NAME */}
-
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Patient Name
                     </label>
-
                     <input
                         type="text"
                         name="patientName"
@@ -255,18 +171,13 @@ function AddPatientForm({ onPatientAdded }) {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                 </div>
 
-
                 {/* AGE */}
-
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Age
                     </label>
-
                     <input
                         type="number"
                         name="age"
@@ -277,18 +188,13 @@ function AddPatientForm({ onPatientAdded }) {
                         min="0"
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                 </div>
 
-
                 {/* GENDER */}
-
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Gender
                     </label>
-
                     <select
                         name="gender"
                         value={patientData.gender}
@@ -296,36 +202,18 @@ function AddPatientForm({ onPatientAdded }) {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-
-                        <option value="">
-                            Select Gender
-                        </option>
-
-                        <option value="Male">
-                            Male
-                        </option>
-
-                        <option value="Female">
-                            Female
-                        </option>
-
-                        <option value="Other">
-                            Other
-                        </option>
-
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
                     </select>
-
                 </div>
 
-
                 {/* BLOOD GROUP */}
-
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Blood Group
                     </label>
-
                     <select
                         name="bloodGroup"
                         value={patientData.bloodGroup}
@@ -333,11 +221,7 @@ function AddPatientForm({ onPatientAdded }) {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-
-                        <option value="">
-                            Select Blood Group
-                        </option>
-
+                        <option value="">Select Blood Group</option>
                         <option value="A+">A+</option>
                         <option value="A-">A-</option>
                         <option value="B+">B+</option>
@@ -346,20 +230,14 @@ function AddPatientForm({ onPatientAdded }) {
                         <option value="AB-">AB-</option>
                         <option value="O+">O+</option>
                         <option value="O-">O-</option>
-
                     </select>
-
                 </div>
 
-
                 {/* PHONE */}
-
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Phone Number
                     </label>
-
                     <input
                         type="tel"
                         name="phone"
@@ -369,18 +247,13 @@ function AddPatientForm({ onPatientAdded }) {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                 </div>
 
-
                 {/* EMERGENCY CONTACT */}
-
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Emergency Contact
                     </label>
-
                     <input
                         type="tel"
                         name="emergencyContact"
@@ -389,18 +262,13 @@ function AddPatientForm({ onPatientAdded }) {
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                 </div>
 
-
                 {/* ADDRESS */}
-
                 <div className="md:col-span-2">
-
                     <label className="block mb-2 font-medium">
                         Address
                     </label>
-
                     <textarea
                         rows="3"
                         name="address"
@@ -410,38 +278,39 @@ function AddPatientForm({ onPatientAdded }) {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                 </div>
 
-
-                {/* DOCTOR */}
-
+                {/* DYNAMIC DOCTOR DROPDOWN */}
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Assigned Doctor
                     </label>
-
-                    <input
-                        type="text"
+                    <select
                         name="doctor"
-                        placeholder="Enter doctor's name"
                         value={patientData.doctor}
                         onChange={handleInputChange}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-
+                        disabled={isLoadingDoctors}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                    >
+                        <option value="">
+                            {isLoadingDoctors ? "Loading Doctors..." : "Select Assigned Doctor"}
+                        </option>
+                        {doctors.map((doc) => {
+                            const docName = doc.doctor_name || doc.full_name || doc.name || doc;
+                            return (
+                                <option key={doc.id || docName} value={docName}>
+                                    {docName} {doc.specialization ? `(${doc.specialization})` : ""}
+                                </option>
+                            );
+                        })}
+                    </select>
                 </div>
 
-
                 {/* ADMISSION DATE */}
-
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Admission Date
                     </label>
-
                     <input
                         type="date"
                         name="admissionDate"
@@ -450,18 +319,13 @@ function AddPatientForm({ onPatientAdded }) {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                 </div>
 
-
                 {/* WARD */}
-
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Ward
                     </label>
-
                     <input
                         type="text"
                         name="ward"
@@ -470,18 +334,13 @@ function AddPatientForm({ onPatientAdded }) {
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                 </div>
 
-
                 {/* BED NUMBER */}
-
                 <div>
-
                     <label className="block mb-2 font-medium">
                         Bed Number
                     </label>
-
                     <input
                         type="text"
                         name="bedNumber"
@@ -490,18 +349,13 @@ function AddPatientForm({ onPatientAdded }) {
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                 </div>
 
-
                 {/* DIAGNOSIS */}
-
                 <div className="md:col-span-2">
-
                     <label className="block mb-2 font-medium">
                         Diagnosis
                     </label>
-
                     <textarea
                         rows="4"
                         name="diagnosis"
@@ -510,31 +364,20 @@ function AddPatientForm({ onPatientAdded }) {
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                 </div>
-
             </div>
 
-
-            {/* ==================================================
-                SAVE BUTTON
-            ================================================== */}
-
+            {/* SAVE BUTTON */}
             <div className="mt-8 flex justify-end">
-
                 <button
                     type="submit"
                     className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition"
                 >
                     Save Patient
                 </button>
-
             </div>
-
         </form>
-
     );
-
 }
 
 export default AddPatientForm;

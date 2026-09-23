@@ -1,187 +1,83 @@
 const express = require("express");
-
 const router = express.Router();
 
 const {
-
     verifyToken,
-
     authorizeRoles
-
 } = require("../middleware/authMiddleware");
 
 const {
-
     addBed,
-
     getAllBeds,
-
     getBedById,
-
     updateBed,
-
     deleteBed,
-
     assignBed,
-
     releaseBed
-
 } = require("../controllers/bedController");
-
 
 // ==========================================================
 // BED CRUD
 // ==========================================================
 
+// Create new bed (Admin only)
 router.post(
-
     "/",
-
     verifyToken,
-
     authorizeRoles("admin"),
-
     addBed
-
 );
 
-
-// ==========================================================
-// GET ALL BEDS
-// GET /api/beds
-// ==========================================================
-
+// Get all beds (Admin, Doctor, Staff)
 router.get(
-
     "/",
-
     verifyToken,
-
-    authorizeRoles(
-
-        "admin",
-
-        "doctor",
-
-        "staff"
-
-    ),
-
+    authorizeRoles("admin", "doctor", "staff"),
     getAllBeds
-
 );
 
-
-// ==========================================================
-// GET BED BY ID
-// GET /api/beds/:id
-// ==========================================================
-
+// Get single bed by ID (Admin, Doctor, Staff)
 router.get(
-
     "/:id",
-
     verifyToken,
-
-    authorizeRoles(
-
-        "admin",
-
-        "doctor",
-
-        "staff"
-
-    ),
-
+    authorizeRoles("admin", "doctor", "staff"),
     getBedById
-
 );
 
-
-// ==========================================================
-// UPDATE BED
-// PUT /api/beds/:id
-// ==========================================================
-
+// Update bed details (Admin only)
 router.put(
-
     "/:id",
-
     verifyToken,
-
     authorizeRoles("admin"),
-
     updateBed
-
 );
 
-
-// ==========================================================
-// DELETE BED
-// DELETE /api/beds/:id
-// ==========================================================
-
+// Delete bed (Admin only)
 router.delete(
-
     "/:id",
-
     verifyToken,
-
     authorizeRoles("admin"),
-
     deleteBed
-
 );
 
-
 // ==========================================================
-// ASSIGN BED
+// BED ASSIGNMENT & RELEASE (Admin & Staff Only)
 // ==========================================================
 
+// Assign patient to bed
 router.put(
-
     "/:id/assign",
-
     verifyToken,
-
-    authorizeRoles(
-
-        "admin",
-
-        "doctor",
-
-        "staff"
-
-    ),
-
+    authorizeRoles("admin", "staff"),
     assignBed
-
 );
 
-
-// ==========================================================
-// RELEASE BED
-// ==========================================================
-
+// Release bed
 router.put(
-
     "/:id/release",
-
     verifyToken,
-
-    authorizeRoles(
-
-        "admin",
-
-        "doctor",
-
-        "staff"
-
-    ),
-
+    authorizeRoles("admin", "staff"),
     releaseBed
-
 );
-
 
 module.exports = router;

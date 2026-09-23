@@ -3,21 +3,12 @@
 // ==========================================================
 
 const express = require("express");
-
 const router = express.Router();
-
-// ==========================================================
-// AUTH MIDDLEWARE
-// ==========================================================
 
 const {
     verifyToken,
     authorizeRoles
 } = require("../middleware/authMiddleware");
-
-// ==========================================================
-// CONTROLLER
-// ==========================================================
 
 const {
     addClinicalNote,
@@ -27,85 +18,41 @@ const {
     deleteClinicalNote
 } = require("../controllers/clinicalNoteController");
 
-// ==========================================================
-// ADD CLINICAL NOTE
-// POST /api/clinical-notes/patient/:patientId
-// ==========================================================
-
+// ALL ROLES ACCESS READ/WRITE WITH CONTROLLER-LEVEL RBAC
 router.post(
     "/patient/:patientId",
     verifyToken,
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
+    authorizeRoles("admin", "doctor", "staff", "nurse"),
     addClinicalNote
 );
-
-// ==========================================================
-// GET ALL NOTES FOR PATIENT
-// GET /api/clinical-notes/patient/:patientId
-// ==========================================================
 
 router.get(
     "/patient/:patientId",
     verifyToken,
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
+    authorizeRoles("admin", "doctor", "staff", "nurse"),
     getPatientClinicalNotes
 );
-
-// ==========================================================
-// GET SINGLE NOTE
-// GET /api/clinical-notes/:id
-// ==========================================================
 
 router.get(
     "/:id",
     verifyToken,
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
+    authorizeRoles("admin", "doctor", "staff", "nurse"),
     getClinicalNoteById
 );
-
-// ==========================================================
-// UPDATE NOTE
-// PUT /api/clinical-notes/:id
-// ==========================================================
 
 router.put(
     "/:id",
     verifyToken,
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
+    authorizeRoles("admin", "doctor", "staff", "nurse"),
     updateClinicalNote
 );
 
-// ==========================================================
-// DELETE NOTE
-// Only admin can permanently delete a clinical note
-// DELETE /api/clinical-notes/:id
-// ==========================================================
-
+// ONLY ADMINS CAN PERMANENTLY DELETE CLINICAL NOTES
 router.delete(
     "/:id",
     verifyToken,
     authorizeRoles("admin"),
     deleteClinicalNote
 );
-
-// ==========================================================
-// EXPORT
-// ==========================================================
 
 module.exports = router;

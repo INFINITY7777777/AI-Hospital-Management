@@ -89,8 +89,15 @@ function Admissions() {
 
             setError("");
 
+            const token = localStorage.getItem("token");
+
             const response = await axios.get(
-                "http://localhost:5000/api/admissions"
+                "http://localhost:5000/api/admissions",
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
             );
 
             setAdmissions(
@@ -154,6 +161,7 @@ function Admissions() {
         loadAdmissions();
 
     }, [navigate, fetchAdmissions]);
+
     // ==========================================================
     // FILTER ADMISSIONS
     // ==========================================================
@@ -225,13 +233,20 @@ function Admissions() {
 
         try {
 
+            const token = localStorage.getItem("token");
+
             // ==========================================================
             // DELETE API
             // ==========================================================
 
             await axios.delete(
 
-                `http://localhost:5000/api/admissions/${admission.id}`
+                `http://localhost:5000/api/admissions/${admission.id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
 
             );
 
@@ -504,7 +519,7 @@ function Admissions() {
 
 
                         /* ==================================================
-                           ADMISSIONS TABLE
+                            ADMISSIONS TABLE
                         ================================================== */
 
                         <div className="bg-white rounded-xl shadow overflow-x-auto">
@@ -691,7 +706,7 @@ function Admissions() {
                                                 ACTIONS
                                             ================================================== */}
 
-                                            <td className="p-4">
+                                            <td className="p-4 flex gap-2">
 
                                                 <button
 

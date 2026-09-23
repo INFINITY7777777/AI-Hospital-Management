@@ -5,16 +5,16 @@
 import { useEffect, useState } from "react";
 
 // ==========================================================
-// AXIOS
+// AXIOS / API SERVICE
 // ==========================================================
 
-import axios from "axios";
+import api from "../services/api";
 
 // ==========================================================
 // REACT ROUTER
 // ==========================================================
 
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 // ==========================================================
 // NAVBAR
@@ -30,17 +30,10 @@ import Sidebar from "../components/Sidebar";
 
 
 // ==========================================================
-// ADMISSION DETAILS
+// ADD ADMISSION FORM COMPONENT
 // ==========================================================
 
-function AdmissionDetails() {
-
-    // ==========================================================
-    // GET ADMISSION ID FROM URL
-    // ==========================================================
-
-    const { id } = useParams();
-
+function AddAdmissionForm() {
 
     // ==========================================================
     // NAVIGATION
@@ -50,17 +43,45 @@ function AdmissionDetails() {
 
 
     // ==========================================================
-    // ADMISSION STATE
+    // PATIENTS STATE
     // ==========================================================
 
-    const [admission, setAdmission] = useState(null);
+    const [patients, setPatients] = useState([]);
 
 
     // ==========================================================
-    // LOADING STATE
+    // AVAILABLE BEDS STATE
+    // ==========================================================
+
+    const [beds, setBeds] = useState([]);
+
+
+    // ==========================================================
+    // FORM DATA STATE
+    // ==========================================================
+
+    const [formData, setFormData] = useState({
+
+        patientId: "",
+
+        bedId: "",
+
+        admissionDate: "",
+
+        admissionReason: "",
+
+        diagnosis: ""
+
+    });
+
+
+    // ==========================================================
+    // LOADING STATES
     // ==========================================================
 
     const [loading, setLoading] = useState(true);
+
+    const [submitting, setSubmitting] = useState(false);
 
 
     // ==========================================================
@@ -71,26 +92,30 @@ function AdmissionDetails() {
 
 
     // ==========================================================
-    // DISCHARGE REASON
-    // ==========================================================
-
-    const [dischargeReason, setDischargeReason] = useState("");
-
-
-    // ==========================================================
-    // DISCHARGE LOADING
-    // ==========================================================
-
-    const [discharging, setDischarging] = useState(false);
-
-
-    // ==========================================================
-    // FETCH ADMISSION
+    // FETCH PATIENTS AND BEDS
+    // Checks for token before making authenticated requests
     // ==========================================================
 
     useEffect(() => {
 
-        const loadAdmission = async () => {
+        const token = localStorage.getItem("token");
+
+        // Redirect to login if token doesn't exist
+        if (!token) {
+
+            navigate("/");
+
+            return;
+
+        }
+
+        const config = {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        };
+
+        const loadData = async () => {
 
             try {
 
@@ -99,29 +124,53 @@ function AdmissionDetails() {
                 setError("");
 
 
-                const response = await axios.get(
+                // ==================================================
+                // FETCH PATIENTS
+                // ==================================================
 
-                    `http://localhost:5000/api/admissions/${id}`
+                const patientsResponse = await api.get(
+                    "/patients",
+                    config
+                );
+
+
+                setPatients(
+                    patientsResponse.data.patients || []
+                );
+
+
+                // ==================================================
+                // FETCH BEDS
+                // ==================================================
+
+                const bedsResponse = await api.get(
+                    "/beds",
+                    config
+                );
+
+
+                // ==================================================
+                // ONLY SHOW AVAILABLE BEDS
+                // ==================================================
+
+                const availableBeds = (
+                    bedsResponse.data.beds || []
+                ).filter(
+
+                    (bed) => bed.status === "Available"
 
                 );
 
 
-                setAdmission(
-
-                    response.data.admission
-
-                );
+                setBeds(availableBeds);
 
             }
 
             catch (error) {
 
                 console.error(
-
-                    "Error fetching admission:",
-
+                    "Error loading admission data:",
                     error
-
                 );
 
 
@@ -129,7 +178,7 @@ function AdmissionDetails() {
 
                     error.response?.data?.error ||
 
-                    "Failed to fetch admission"
+                    "Failed to load patients and beds"
 
                 );
 
@@ -144,29 +193,56 @@ function AdmissionDetails() {
         };
 
 
-        loadAdmission();
+        loadData();
 
-    }, [id]);
+    }, [navigate]);
 
 
     // ==========================================================
-    // DISCHARGE PATIENT
+    // HANDLE INPUT CHANGE
     // ==========================================================
 
-    const handleDischarge = async () => {
+    const handleChange = (event) => {
+
+        const { name, value } = event.target;
+
+
+        setFormData((prevData) => ({
+
+            ...prevData,
+
+            [name]: value
+
+        }));
+
+    };
+
+
+    // ==========================================================
+    // SUBMIT ADMISSION
+    // ==========================================================
+
+    const handleSubmit = async (event) => {
+
+        event.preventDefault();
+
 
         // ==========================================================
-        // CONFIRMATION
+        // BASIC VALIDATION
         // ==========================================================
 
-        const confirmDischarge = window.confirm(
+        if (!formData.patientId) {
 
-            "Are you sure you want to discharge this patient?"
+            alert("Please select a patient");
 
-        );
+            return;
+
+        }
 
 
-        if (!confirmDischarge) {
+        if (!formData.admissionDate) {
+
+            alert("Please select an admission date");
 
             return;
 
@@ -175,28 +251,44 @@ function AdmissionDetails() {
 
         try {
 
-            setDischarging(true);
+            setSubmitting(true);
 
             setError("");
 
+            const token = localStorage.getItem("token");
+
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            };
 
             // ======================================================
-            // DISCHARGE API
+            // CREATE ADMISSION API CALL
             // ======================================================
 
-            await axios.put(
+            await api.post(
 
-                `http://localhost:5000/api/admissions/${id}/discharge`,
+                "/admissions",
 
                 {
+                    patientId: Number(formData.patientId),
 
-                    dischargeDate:
-                        new Date().toISOString().split("T")[0],
+                    bedId: formData.bedId
+                        ? Number(formData.bedId)
+                        : null,
 
-                    dischargeReason:
-                        dischargeReason
+                    admissionDate:
+                        formData.admissionDate,
 
-                }
+                    admissionReason:
+                        formData.admissionReason,
+
+                    diagnosis:
+                        formData.diagnosis
+                },
+
+                config
 
             );
 
@@ -206,14 +298,12 @@ function AdmissionDetails() {
             // ======================================================
 
             alert(
-
-                "Patient discharged successfully"
-
+                "Patient admitted successfully"
             );
 
 
             // ======================================================
-            // RETURN TO ADMISSIONS
+            // REDIRECT TO ADMISSIONS LIST
             // ======================================================
 
             navigate("/admissions");
@@ -223,11 +313,8 @@ function AdmissionDetails() {
         catch (error) {
 
             console.error(
-
-                "Error discharging patient:",
-
+                "Error creating admission:",
                 error
-
             );
 
 
@@ -235,7 +322,7 @@ function AdmissionDetails() {
 
                 error.response?.data?.error ||
 
-                "Failed to discharge patient"
+                "Failed to create admission"
 
             );
 
@@ -243,7 +330,7 @@ function AdmissionDetails() {
 
         finally {
 
-            setDischarging(false);
+            setSubmitting(false);
 
         }
 
@@ -270,77 +357,9 @@ function AdmissionDetails() {
 
                         <p className="text-gray-500">
 
-                            Loading admission details...
+                            Loading admission form...
 
                         </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        );
-
-    }
-
-
-    // ==========================================================
-    // ERROR / NOT FOUND
-    // ==========================================================
-
-    if (!admission) {
-
-        return (
-
-            <div className="min-h-screen bg-gray-100">
-
-                <Navbar />
-
-                <div className="flex">
-
-                    <Sidebar />
-
-                    <div className="flex-1 p-8">
-
-                        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
-
-                            {error}
-
-                        </div>
-
-
-                        <div className="flex gap-3">
-
-                            <button
-
-                                onClick={() =>
-                                    navigate(`/admissions/${id}/edit`)
-                                }
-
-                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-
-                            >
-
-                                Edit Admission
-
-                            </button>
-
-                            <button
-
-                                onClick={() =>
-                                    navigate("/admissions")
-                                }
-
-                                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-
-                            >
-
-                                Back to Admissions
-
-                            </button>
-
-                        </div>
 
                     </div>
 
@@ -395,57 +414,39 @@ function AdmissionDetails() {
                         <div>
 
                             <h1 className="text-3xl font-bold">
-                                Admission Details
+
+                                Add Admission
+
                             </h1>
 
                             <p className="text-gray-500">
-                                View patient admission information
+
+                                Admit a patient to the hospital
+
                             </p>
 
                         </div>
 
-                        <div className="flex gap-3">
 
-                            {/* EDIT ADMISSION */}
+                        <button
 
-                            <button
+                            onClick={() =>
+                                navigate("/admissions")
+                            }
 
-                                onClick={() =>
-                                    navigate(`/admissions/${id}/edit`)
-                                }
+                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
 
-                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                        >
 
-                            >
+                            Back to Admissions
 
-                                Edit Admission
-
-                            </button>
-
-
-                            {/* BACK */}
-
-                            <button
-
-                                onClick={() =>
-                                    navigate("/admissions")
-                                }
-
-                                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-
-                            >
-
-                                Back to Admissions
-
-                            </button>
-
-                        </div>
+                        </button>
 
                     </div>
 
 
                     {/* ==================================================
-                        ERROR
+                        ERROR ALERT
                     ================================================== */}
 
                     {error && (
@@ -460,406 +461,297 @@ function AdmissionDetails() {
 
 
                     {/* ==================================================
-                        PATIENT INFORMATION
+                        FORM
                     ================================================== */}
 
-                    <div className="bg-white rounded-xl shadow p-6 mb-6">
+                    <form
 
-                        <h2 className="text-xl font-bold mb-5">
+                        onSubmit={handleSubmit}
 
-                            Patient Information
+                        className="bg-white rounded-xl shadow p-6 max-w-4xl"
 
-                        </h2>
+                    >
 
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* ==================================================
+                            PATIENT SELECTION
+                        ================================================== */}
 
+                        <div className="mb-5">
 
-                            <div>
+                            <label className="block font-semibold mb-2">
 
-                                <p className="text-gray-500">
+                                Select Patient
 
-                                    Patient Name
+                            </label>
 
-                                </p>
 
-                                <p className="text-lg font-semibold">
+                            <select
 
-                                    {admission.patient_name}
+                                name="patientId"
 
-                                </p>
+                                value={
+                                    formData.patientId
+                                }
 
-                            </div>
+                                onChange={handleChange}
 
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Phone
-
-                                </p>
-
-                                <p className="text-lg font-semibold">
-
-                                    {admission.phone || "—"}
-
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Age
-
-                                </p>
-
-                                <p className="text-lg font-semibold">
-
-                                    {admission.age || "—"}
-
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Gender
-
-                                </p>
-
-                                <p className="text-lg font-semibold">
-
-                                    {admission.gender || "—"}
-
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Blood Group
-
-                                </p>
-
-                                <p className="text-lg font-semibold">
-
-                                    {admission.blood_group || "—"}
-
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    {/* ==================================================
-                        BED INFORMATION
-                    ================================================== */}
-
-                    <div className="bg-white rounded-xl shadow p-6 mb-6">
-
-                        <h2 className="text-xl font-bold mb-5">
-
-                            Bed Information
-
-                        </h2>
-
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Bed Number
-
-                                </p>
-
-                                <p className="text-lg font-semibold">
-
-                                    {admission.bed_number || "Not Assigned"}
-
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Ward
-
-                                </p>
-
-                                <p className="text-lg font-semibold">
-
-                                    {admission.ward || "—"}
-
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Bed Type
-
-                                </p>
-
-                                <p className="text-lg font-semibold">
-
-                                    {admission.bed_type || "—"}
-
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    {/* ==================================================
-                        ADMISSION INFORMATION
-                    ================================================== */}
-
-                    <div className="bg-white rounded-xl shadow p-6 mb-6">
-
-                        <h2 className="text-xl font-bold mb-5">
-
-                            Admission Information
-
-                        </h2>
-
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Admission Date
-
-                                </p>
-
-                                <p className="text-lg font-semibold">
-
-                                    {new Date(
-
-                                        admission.admission_date
-
-                                    ).toLocaleDateString()}
-
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Status
-
-                                </p>
-
-                                <span
-
-                                    className={
-
-                                        admission.status === "Admitted"
-
-                                            ? "inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold"
-
-                                            : "inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-semibold"
-
-                                    }
-
-                                >
-
-                                    {admission.status}
-
-                                </span>
-
-                            </div>
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Admission Reason
-
-                                </p>
-
-                                <p className="text-lg">
-
-                                    {admission.admission_reason || "—"}
-
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <p className="text-gray-500">
-
-                                    Diagnosis
-
-                                </p>
-
-                                <p className="text-lg">
-
-                                    {admission.diagnosis || "—"}
-
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    {/* ==================================================
-                        DISCHARGE SECTION
-                    ================================================== */}
-
-                    {admission.status !== "Discharged" && (
-
-                        <div className="bg-white rounded-xl shadow p-6">
-
-                            <h2 className="text-xl font-bold mb-5">
-
-                                Discharge Patient
-
-                            </h2>
-
-
-                            <div className="mb-5">
-
-                                <label className="block font-semibold mb-2">
-
-                                    Discharge Reason
-
-                                </label>
-
-
-                                <textarea
-
-                                    value={
-                                        dischargeReason
-                                    }
-
-                                    onChange={(event) =>
-
-                                        setDischargeReason(
-
-                                            event.target.value
-
-                                        )
-
-                                    }
-
-                                    placeholder="Enter discharge reason"
-
-                                    rows="4"
-
-                                    className="w-full border border-gray-300 rounded-lg p-3"
-
-                                />
-
-                            </div>
-
-
-                            <button
-
-                                onClick={handleDischarge}
-
-                                disabled={discharging}
-
-                                className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                                className="w-full border border-gray-300 rounded-lg p-3"
 
                             >
 
-                                {discharging
+                                <option value="">
 
-                                    ? "Discharging..."
+                                    Select a patient
 
-                                    : "Discharge Patient"
+                                </option>
+
+
+                                {patients.map(
+
+                                    (patient) => (
+
+                                        <option
+
+                                            key={patient.id}
+
+                                            value={patient.id}
+
+                                        >
+
+                                            {patient.patient_name}
+
+                                        </option>
+
+                                    )
+
+                                )}
+
+                            </select>
+
+                        </div>
+
+
+                        {/* ==================================================
+                            BED SELECTION
+                        ================================================== */}
+
+                        <div className="mb-5">
+
+                            <label className="block font-semibold mb-2">
+
+                                Select Bed
+
+                            </label>
+
+
+                            <select
+
+                                name="bedId"
+
+                                value={
+                                    formData.bedId
+                                }
+
+                                onChange={handleChange}
+
+                                className="w-full border border-gray-300 rounded-lg p-3"
+
+                            >
+
+                                <option value="">
+
+                                    No Bed / Assign Later
+
+                                </option>
+
+
+                                {beds.map(
+
+                                    (bed) => (
+
+                                        <option
+
+                                            key={bed.id}
+
+                                            value={bed.id}
+
+                                        >
+
+                                            {bed.bed_number}
+                                            {" - "}
+                                            {bed.ward}
+                                            {" - "}
+                                            {bed.bed_type}
+
+                                        </option>
+
+                                    )
+
+                                )}
+
+                            </select>
+
+
+                            {beds.length === 0 && (
+
+                                <p className="text-red-500 text-sm mt-2">
+
+                                    No available beds currently.
+
+                                </p>
+
+                            )}
+
+                        </div>
+
+
+                        {/* ==================================================
+                            ADMISSION DATE
+                        ================================================== */}
+
+                        <div className="mb-5">
+
+                            <label className="block font-semibold mb-2">
+
+                                Admission Date
+
+                            </label>
+
+
+                            <input
+
+                                type="date"
+
+                                name="admissionDate"
+
+                                value={
+                                    formData.admissionDate
+                                }
+
+                                onChange={handleChange}
+
+                                className="w-full border border-gray-300 rounded-lg p-3"
+
+                            />
+
+                        </div>
+
+
+                        {/* ==================================================
+                            ADMISSION REASON
+                        ================================================== */}
+
+                        <div className="mb-5">
+
+                            <label className="block font-semibold mb-2">
+
+                                Admission Reason
+
+                            </label>
+
+
+                            <textarea
+
+                                name="admissionReason"
+
+                                value={
+                                    formData.admissionReason
+                                }
+
+                                onChange={handleChange}
+
+                                placeholder="Enter reason for admission"
+
+                                rows="4"
+
+                                className="w-full border border-gray-300 rounded-lg p-3"
+
+                            />
+
+                        </div>
+
+
+                        {/* ==================================================
+                            DIAGNOSIS
+                        ================================================== */}
+
+                        <div className="mb-6">
+
+                            <label className="block font-semibold mb-2">
+
+                                Diagnosis
+
+                            </label>
+
+
+                            <textarea
+
+                                name="diagnosis"
+
+                                value={
+                                    formData.diagnosis
+                                }
+
+                                onChange={handleChange}
+
+                                placeholder="Enter diagnosis"
+
+                                rows="4"
+
+                                className="w-full border border-gray-300 rounded-lg p-3"
+
+                            />
+
+                        </div>
+
+
+                        {/* ==================================================
+                            BUTTONS
+                        ================================================== */}
+
+                        <div className="flex gap-3">
+
+                            <button
+
+                                type="submit"
+
+                                disabled={submitting}
+
+                                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+
+                            >
+
+                                {submitting
+
+                                    ? "Admitting Patient..."
+
+                                    : "Admit Patient"
 
                                 }
 
                             </button>
 
-                        </div>
 
-                    )}
+                            <button
 
+                                type="button"
 
-                    {/* ==================================================
-                        DISCHARGED INFORMATION
-                    ================================================== */}
-
-                    {admission.status === "Discharged" && (
-
-                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-
-                            <h2 className="text-xl font-bold mb-4">
-
-                                Discharge Information
-
-                            </h2>
-
-
-                            <p className="mb-2">
-
-                                <strong>Discharge Date:</strong>{" "}
-
-                                {admission.discharge_date
-
-                                    ? new Date(
-
-                                        admission.discharge_date
-
-                                    ).toLocaleDateString()
-
-                                    : "—"
-
+                                onClick={() =>
+                                    navigate("/admissions")
                                 }
 
-                            </p>
+                                className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600"
 
+                            >
 
-                            <p>
+                                Cancel
 
-                                <strong>Reason:</strong>{" "}
-
-                                {admission.discharge_reason || "—"}
-
-                            </p>
+                            </button>
 
                         </div>
 
-                    )}
+                    </form>
 
                 </div>
 
@@ -876,4 +768,4 @@ function AdmissionDetails() {
 // EXPORT
 // ==========================================================
 
-export default AdmissionDetails;
+export default AddAdmissionForm;

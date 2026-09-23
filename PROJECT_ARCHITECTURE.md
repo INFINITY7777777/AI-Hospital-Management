@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [Database Schema Reference](#database-schema-reference)
 - [Dashboard](#dashboard)
 - [Patients](#patients)
 - [Doctors](#doctors)
@@ -14,6 +15,24 @@
 - [Pharmacy](#pharmacy)
 - [Settings](#settings)
 - [User Management (Admin)](#user-management-admin)
+
+---
+
+## Database Schema Reference
+
+| Table | Primary Key | Key Foreign/Related Columns | Role & Notes |
+|---|---|---|---|
+| `users` | `id` (`int8`) | — | User accounts (`admin`, `doctor`, `staff`) with auth & MPIN fields. |
+| `patients` | `id` (`int8`) | `doctor` (`varchar`), `ward`, `bed_number` | Stores patient records and assigned doctor name string. |
+| `doctors` | `id` (`int4`) | `email` (`varchar`), `doctor_name` (`varchar`) | Doctor profiles and specialization records. |
+| `appointments` | `id` (`int4`) | `patient_id` (`int4`), `doctor_id` (`int4`) | Appointment scheduling table. |
+| `beds` | `id` (`int4`) | `patient_id` (`int4`) | Hospital beds management. |
+| `admissions` | `id` (`int4`) | `patient_id` (`int4`), `bed_id` (`int4`) | Active and past patient admission records. |
+| `clinical_notes` | `id` (`int8`) | `patient_id` (`int8`), `author_id` (`int8`) | Clinical notes entered by clinical staff. |
+| `patient_stay_history` | `id` (`int4`) | `patient_id` (`int8`), `admission_id` (`int4`), `bed_id` (`int4`) | Historical record of patient bed assignments. |
+| `notifications` | `id` (`int8`) | `user_id` (`int8`), `patient_id` (`int8`), `sender_id` (`int8`) | In-app notification tracking. |
+| `medicines` | `id` (`int4`) | — | Pharmacy inventory management. |
+| `user_settings` | `id` (`int4`) | `user_id` (`int4`) | System and user preferences. |
 
 ---
 
@@ -32,7 +51,7 @@
 **Backend Controllers & Routes:**
 - `dashboardRoutes.js`: `/api/dashboard/stats`, `/api/dashboard/today-appointments`, `/api/dashboard/upcoming-appointments`, `/api/dashboard/patient-trends`
 - `dashboardController.js`: `getDashboardStats`, `getTodayAppointments`, `getUpcomingAppointments`, `getPatientTrends`
-- Models: `patients`, `doctors`, `appointments`, `admissions`, `beds` tables
+- **Database Tables Used:** `patients`, `doctors`, `appointments`, `admissions`, `beds`
 
 ---
 
@@ -52,7 +71,7 @@
 **Backend Controllers & Routes:**
 - `patientRoutes.js`: `/`, `/`, `/:id`, `/:id`, `/:id`
 - `patientController.js`: `addPatient`, `getAllPatients`, `getPatientById`, `updatePatient`, `deletePatient`
-- Models: `patients` table
+- **Database Tables Used:** `patients`
 
 ---
 
@@ -72,7 +91,7 @@
 **Backend Controllers & Routes:**
 - `doctorRoutes.js`: `/`, `/`, `/:id`, `/:id`, `/:id`
 - `doctorController.js`: `addDoctor`, `getAllDoctors`, `getDoctorById`, `updateDoctor`, `deleteDoctor`
-- Models: `doctors` table
+- **Database Tables Used:** `doctors`, `users`
 
 ---
 
@@ -92,7 +111,7 @@
 **Backend Controllers & Routes:**
 - `appointmentRoutes.js`: `/`, `/`, `/:id`, `/:id`, `/:id`
 - `appointmentController.js`: `addAppointment`, `getAllAppointments`, `getAppointmentById`, `updateAppointment`, `deleteAppointment`
-- Models: `appointments` table
+- **Database Tables Used:** `appointments`, `patients`, `doctors`
 
 ---
 
@@ -103,7 +122,7 @@
 **UI Components:** Navbar, Sidebar
 
 **Routes & Endpoints:**
-- `GET /api/admissions` - list all admissions
+- `GET /api/admissions` - list all admissions (Role-filtered by `patients.doctor` for doctors)
 - `POST /api/admissions` - add new admission
 - `GET /api/admissions/:id` - get admission by ID
 - `PUT /api/admissions/:id` - update admission
@@ -112,8 +131,8 @@
 
 **Backend Controllers & Routes:**
 - `admissionRoutes.js`: `/`, `/`, `/:id`, `/:id`, `/:id/discharge`, `/:id`
-- `admissioncontroller.js`: `addAdmission`, `getAdmissions`, `getAdmissionById`, `updateAdmission`, `dischargePatient`, `deleteAdmission`
-- Models: `admissions`, `beds`, `patient_stay_history` tables
+- `admissionController.js`: `addAdmission`, `getAdmissions`, `getAdmissionById`, `updateAdmission`, `dischargePatient`, `deleteAdmission`
+- **Database Tables Used:** `admissions`, `patients`, `beds`, `patient_stay_history`
 
 ---
 
@@ -124,7 +143,7 @@
 **UI Components:** Navbar, Sidebar, PatientSearch
 
 **Routes & Endpoints:**
-- `GET /api/beds` - list all beds
+- `GET /api/beds` - list all beds (Role-filtered by `patients.doctor` for doctors)
 - `POST /api/beds` - add new bed
 - `GET /api/beds/:id` - get bed by ID
 - `PUT /api/beds/:id` - update bed
@@ -135,7 +154,7 @@
 **Backend Controllers & Routes:**
 - `bedRoutes.js`: `/`, `/`, `/:id`, `/:id`, `/:id`, `/:id/assign`, `/:id/release`
 - `bedController.js`: `addBed`, `getAllBeds`, `getBedById`, `updateBed`, `deleteBed`, `assignBed`, `releaseBed`
-- Models: `beds` table
+- **Database Tables Used:** `beds`, `patients`
 
 ---
 
@@ -174,7 +193,7 @@
 **Backend Controllers & Routes:**
 - `notificationRoutes.js`: `/`, `/`, `/unread-count`, `/read-all`, `/:id/read`, `/:id`
 - `notificationController.js`: `getNotifications`, `createNotification`, `getUnreadNotificationCount`, `markAllNotificationsAsRead`, `markNotificationAsRead`, `deleteNotification`
-- Models: `notifications` table
+- **Database Tables Used:** `notifications`
 
 ---
 
@@ -193,7 +212,7 @@
 **Backend Controllers & Routes:**
 - `pharmacyRoutes.js`: `/`, `/`, `/:id`, `/:id`
 - `pharmacyController.js`: `getMedicines`, `addMedicine`, `updateMedicine`, `deleteMedicine`
-- Models: `medicines` table
+- **Database Tables Used:** `medicines`
 
 ---
 
@@ -210,7 +229,7 @@
 **Backend Controllers & Routes:**
 - `settingsRoutes.js`: `/`, `/`
 - `settingsController.js`: `getSettings`, `updateProfile`
-- Models: `users` table
+- **Database Tables Used:** `users`, `user_settings`
 
 ---
 
@@ -228,6 +247,4 @@
 **Backend Controllers & Routes:**
 - `adminRoutes.js`: `/users`, `/users/:userId/role`, `/users/:userId`
 - `adminController.js`: `getAllUsers`, `updateUserRole`, `deleteUser`
-- Models: `users` table
-
-**Dependency Map:**
+- **Database Tables Used:** `users`

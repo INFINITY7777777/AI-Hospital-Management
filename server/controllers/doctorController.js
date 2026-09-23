@@ -109,42 +109,50 @@ const addDoctor = async (req, res) => {
 };
 
 // ==========================================================
-// GET ALL DOCTORS
+// GET ALL DOCTORS (Combines 'doctors' table and 'users' with role='doctor')
 // ==========================================================
-
 const getAllDoctors = async (req, res) => {
-
     try {
-
         const result = await db.query(
             `
-            SELECT *
-            FROM doctors
-            ORDER BY created_at DESC
+            SELECT 
+                d.id,
+                d.doctor_name,
+                d.specialization,
+                d.email,
+                d.phone,
+                d.department
+            FROM doctors d
+
+            UNION
+
+            SELECT 
+                u.id,
+                u.full_name AS doctor_name,
+                'General Physician' AS specialization,
+                u.email,
+                NULL AS phone,
+                'General' AS department
+            FROM users u
+            WHERE LOWER(TRIM(u.role)) = 'doctor'
+              AND NOT EXISTS (
+                  SELECT 1 FROM doctors d2 
+                  WHERE LOWER(TRIM(d2.email)) = LOWER(TRIM(u.email))
+                     OR LOWER(TRIM(d2.doctor_name)) = LOWER(TRIM(u.full_name))
+              )
+            ORDER BY doctor_name ASC;
             `
         );
 
         res.status(200).json({
-
             doctors: result.rows
-
         });
-
     } catch (error) {
-
-        console.error(
-            "[Doctor Fetch Error]:",
-            error
-        );
-
+        console.error("[Doctor Fetch Error]:", error);
         res.status(500).json({
-
             error: "Failed to fetch doctors"
-
         });
-
     }
-
 };
 
 // ==========================================================

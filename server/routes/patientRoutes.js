@@ -1,143 +1,62 @@
 // ==========================================================
 // PATIENT ROUTES
+// Configured with role authentication & route protections
 // ==========================================================
 
 const express = require("express");
-
 const router = express.Router();
 
-
-// ==========================================================
-// AUTH MIDDLEWARE
-// ==========================================================
-
 const {
-
     verifyToken,
     authorizeRoles
-
 } = require("../middleware/authMiddleware");
 
-
-// ==========================================================
-// PATIENT CONTROLLER
-// ==========================================================
-
 const {
-
     addPatient,
     getAllPatients,
     getPatientById,
     updatePatient,
     deletePatient
-
 } = require("../controllers/patientController");
 
-
-// ==========================================================
-// CREATE PATIENT
-// ==========================================================
-
+// Create Patient (Admin, Doctor, Staff)
 router.post(
-
     "/",
-
     verifyToken,
-
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
-
+    authorizeRoles("admin", "doctor", "staff"),
     addPatient
-
 );
 
-
-// ==========================================================
-// GET ALL PATIENTS
-// ==========================================================
-
+// Get All Patients (Role-filtered inside controller)
 router.get(
-
     "/",
-
     verifyToken,
-
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
-
+    authorizeRoles("admin", "doctor", "staff"),
     getAllPatients
-
 );
 
-
-// ==========================================================
-// GET PATIENT BY ID
-// ==========================================================
-
+// Get Patient By ID (Ownership enforced for doctors)
 router.get(
-
     "/:id",
-
     verifyToken,
-
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
-
+    authorizeRoles("admin", "doctor", "staff"),
     getPatientById
-
 );
 
-
-// ==========================================================
-// UPDATE PATIENT
-// ==========================================================
-
+// Update Patient
 router.put(
-
     "/:id",
-
     verifyToken,
-
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
-
+    authorizeRoles("admin", "doctor", "staff"),
     updatePatient
-
 );
 
-
-// ==========================================================
-// DELETE PATIENT
-// ONLY ADMIN
-// ==========================================================
-
+// Delete Patient (Admin Only)
 router.delete(
-
     "/:id",
-
     verifyToken,
-
     authorizeRoles("admin"),
-
     deletePatient
-
 );
-
-
-// ==========================================================
-// EXPORT
-// ==========================================================
 
 module.exports = router;
