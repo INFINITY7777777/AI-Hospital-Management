@@ -172,8 +172,8 @@ All modified and untracked files in the working tree are ready for batch commit:
 - [x] Admin User Management & Role Control module
 - [x] Patient-specific AI Chatbot (Context-aware prompt engine + OpenRouter/Groq multi-model failover)
 - [x] AI Medical Summary (Automated discharge summary & clinical referral generator)
+- [x] Prompt management system
 
 **PENDING**
-- [ ] Prompt management system
 - [ ] Final security audit
 - [ ] Production build & deployment

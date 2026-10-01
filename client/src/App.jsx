@@ -1,7 +1,3 @@
-// ==========================================================
-// MAIN APP COMPONENT
-// ==========================================================
-
 import "./App.css";
 
 // ==========================================================
@@ -17,6 +13,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import UserManagement from "./pages/UserManagement";
+import PromptManagement from "./pages/PromptManagement";
 
 // ==========================================================
 // DASHBOARD
@@ -95,12 +92,20 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Admin Only Route */}
+        {/* Admin Only Routes */}
         <Route
           path="/users"
           element={
             <AdminRoute>
               <UserManagement />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/prompts"
+          element={
+            <AdminRoute>
+              <PromptManagement />
             </AdminRoute>
           }
         />

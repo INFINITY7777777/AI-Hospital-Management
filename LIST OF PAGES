@@ -1,0 +1,73 @@
+1. Authentication — 2 pages
+#	Page	Route
+1	Login	/
+2	Register	/register
+
+These should probably be treated as one visual family because they are part of the same authentication flow.
+
+2. Main Dashboard — 1 page
+#	Page	Route
+3	Dashboard	/dashboard
+
+This is one of the most important pages because it establishes the overall HMS design language.
+
+3. Patients — 3 pages
+#	Page	Route
+4	Patients	/patients
+5	Patient Details	/patients/:id
+6	Edit Patient	/patients/:id/edit
+
+And the Patient Details page contains several major UI sections/components:
+
+Digital Patient Card
+Clinical Notes
+Medical History
+Stay/Ward History
+Patient AI Chat
+Patient AI Summary
+Raise Alert
+Patient-related actions
+
+So Patient Details is actually one of the biggest redesign tasks.
+
+4. Doctors — 3 pages
+#	Page	Route
+7	Doctors	/doctors
+8	Doctor Details	/doctors/:id
+9	Edit Doctor	/doctors/:id/edit
+5. Appointments — 3 pages
+#	Page	Route
+10	Appointments	/appointments
+11	Appointment Details	/appointments/:id
+12	Edit Appointment	/appointments/:id/edit
+6. Beds — 4 pages
+#	Page	Route
+13	Bed List	/beds
+14	Add Bed	/beds/add
+15	Edit Bed	/beds/edit/:id
+16	Bed Details	/beds/:id
+7. Admissions — 4 pages
+#	Page	Route
+17	Admissions	/admissions
+18	Add Admission	/admissions/add
+19	Admission Details	/admissions/:id
+20	Edit Admission	/admissions/:id/edit
+8. Pharmacy — 1 page
+#	Page	Route
+21	Pharmacy	/pharmacy
+9. Notifications — 1 page
+#	Page	Route
+22	Notifications	/notifications
+
+This also relates to your NotificationBell component, so we'll need to consider both the full Notifications page and the notification UI in the navbar.
+
+10. Settings — 1 page
+#	Page	Route
+23	Settings	/settings
+11. Admin — 2 pages
+
+These are protected by your AdminRoute.
+
+#	Page	Route
+24	User Management	/users
+25	Prompt Management	/prompts

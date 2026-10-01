@@ -172,37 +172,79 @@ const getBedOccupancySummary = async (req, res) => {
 
 // ==========================================================
 // GET PATIENT TRAFFIC TRENDS
-// Aggregates weekly appointments grouped by day
+// Returns appointment traffic for the selected week
+// Supported periods: this_week, last_week
 // ==========================================================
+
 const getPatientTrends = async (req, res) => {
   try {
+    const { period = "this_week" } = req.query;
+
+    if (!["this_week", "last_week"].includes(period)) {
+      return res.status(400).json({
+        error: "Invalid period. Use this_week or last_week.",
+      });
+    }
+
     const query = `
-      SELECT 
+      SELECT
         TO_CHAR(appointment_date, 'Dy') AS day,
         COUNT(id) AS count
       FROM appointments
-      WHERE DATE_TRUNC('week', appointment_date) = DATE_TRUNC('week', NOW())
-      GROUP BY TO_CHAR(appointment_date, 'Dy'), EXTRACT(ISODOW FROM appointment_date)
-      ORDER BY EXTRACT(ISODOW FROM appointment_date) ASC;
+      WHERE appointment_date >=
+        DATE_TRUNC(
+          'week',
+          CURRENT_DATE
+          ${period === "last_week" ? " - INTERVAL '1 week'" : ""}
+        )
+      AND appointment_date <
+        DATE_TRUNC(
+          'week',
+          CURRENT_DATE
+          ${period === "this_week" ? " + INTERVAL '1 week'" : ""}
+        )
+      GROUP BY
+        TO_CHAR(appointment_date, 'Dy'),
+        EXTRACT(ISODOW FROM appointment_date)
+      ORDER BY
+        EXTRACT(ISODOW FROM appointment_date);
     `;
 
     const result = await db.query(query);
 
-    const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const daysOfWeek = [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun",
+    ];
+
     const formattedData = daysOfWeek.map((day) => {
       const found = result.rows.find(
-        (r) => r.day && r.day.trim().toLowerCase() === day.toLowerCase()
+        (row) =>
+          row.day &&
+          row.day.trim().toLowerCase() === day.toLowerCase()
       );
+
       return {
         day,
         count: found ? parseInt(found.count, 10) : 0,
       };
     });
 
-    res.status(200).json({ trends: formattedData });
+    res.status(200).json({
+      period,
+      trends: formattedData,
+    });
   } catch (error) {
     console.error("[Patient Trends Error]:", error);
-    res.status(500).json({ error: "Failed to fetch patient trend data" });
+
+    res.status(500).json({
+      error: "Failed to fetch patient trend data",
+    });
   }
 };
 

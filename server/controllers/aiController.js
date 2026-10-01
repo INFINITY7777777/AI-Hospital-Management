@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const { executeChatCompletion } = require("../services/aiService");
+const { getFormattedPrompt } = require("./promptController");
 
 /**
  * AI Patient Chat Controller
@@ -57,13 +58,9 @@ const patientChat = async (req, res) => {
             .join("\n")
         : "No clinical notes.";
 
-    const systemContext = [
-      "You are an AI Clinical Assistant built into a Hospital Management System.",
-      "Answer questions strictly based on the provided patient record. Do not invent medical conditions.",
-      "",
+    const patientContext = [
       "PATIENT RECORD:",
-      "Name: " +
-        (patient.full_name || patient.patient_name || patient.name || "N/A"),
+      "Name: " + (patient.full_name || patient.patient_name || patient.name || "N/A"),
       "Age: " + (patient.age || "N/A"),
       "Gender: " + (patient.gender || "N/A"),
       "Blood Group: " + (patient.blood_group || "N/A"),
@@ -75,6 +72,21 @@ const patientChat = async (req, res) => {
       "CLINICAL NOTES:",
       formattedNotes,
     ].join("\n");
+
+    // Default system prompt fallback if database template is absent
+    const fallbackTemplate = [
+      "You are an AI Clinical Assistant built into a Hospital Management System.",
+      "Answer questions strictly based on the provided patient record. Do not invent medical conditions.",
+      "",
+      "{patient_context}"
+    ].join("\n");
+
+    // Dynamically retrieve formatted prompt template
+    const systemContext = await getFormattedPrompt(
+      "PATIENT_CHAT",
+      { patient_context: patientContext },
+      fallbackTemplate
+    );
 
     const result = await executeChatCompletion(systemContext, prompt);
 
@@ -125,7 +137,7 @@ const generatePatientReport = async (req, res) => {
       [safePatientId]
     );
 
-    // Map report types to document titles
+    // Map report types to document titles and prompt keys
     const titleMap = {
       discharge: "Comprehensive Discharge Summary",
       referral: "Official Medical Referral Letter",
@@ -135,6 +147,7 @@ const generatePatientReport = async (req, res) => {
     };
 
     const documentTitle = titleMap[reportType] || "Clinical Summary Report";
+    const promptKey = reportType === "referral" ? "REFERRAL_LETTER" : "DISCHARGE_SUMMARY";
 
     const currentDate = new Date().toLocaleDateString("en-US", {
       year: "numeric",
@@ -142,17 +155,23 @@ const generatePatientReport = async (req, res) => {
       day: "numeric",
     });
 
-    const systemContext = [
-      `You are a senior Chief Medical Officer compiling an ${documentTitle}.`,
+    const fallbackSystemTemplate = [
+      `You are a senior Chief Medical Officer compiling an {document_title}.`,
       "Synthesize the electronic medical health records into a formal, structured Markdown report.",
       "",
       "Formatting & Content guidelines:",
       "- Use professional structured headings tailored to the requested document type.",
       "- Be concise, professional, and clinical.",
       "- Strictly rely on provided clinical history without inventing unrecorded medical events.",
-      "- Do NOT output placeholder text like '[Insert Date]' or '[Chief Medical Officer's Name]'.",
+      "- Do NOT output placeholder text like '[Insert Date]' or '[Chief Medical Officer\'s Name]'.",
       `- End the document with Date: ${currentDate} and Sign-off: Chief Medical Officer / Attending Clinical Team.`,
     ].join("\n");
+
+    const systemContext = await getFormattedPrompt(
+      promptKey,
+      { document_title: documentTitle },
+      fallbackSystemTemplate
+    );
 
     const formattedAdmissions =
       admissionsResult.rows.length > 0

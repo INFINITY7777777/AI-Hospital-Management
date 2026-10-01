@@ -28,6 +28,7 @@ const patientHistoryRoutes = require("./routes/patientHistoryRoutes");
 const pharmacyRoutes = require("./routes/pharmacyRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const promptRoutes = require("./routes/promptRoutes");
 
 // JWT Authentication Middleware
 const { verifyToken } = require("./middleware/authMiddleware");
@@ -58,6 +59,7 @@ app.use("/api/pharmacy", pharmacyRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/prompts", promptRoutes);
 
 // ========================= TEST & HEALTH ROUTES =========================
 

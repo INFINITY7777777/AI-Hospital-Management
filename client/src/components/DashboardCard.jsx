@@ -1,112 +1,150 @@
 // ==========================================================
 // DASHBOARD CARD
+// UI REDESIGN ONLY
 // ==========================================================
 
 function DashboardCard({
-    title,
-    value,
-    subtitle,
-    icon,
-    onClick,
-    iconBg = "bg-blue-100",
-    iconColor = "text-blue-600"
+  title,
+  value,
+  subtitle,
+  icon,
+  onClick,
+  color = "blue",
 }) {
+  const colorStyles = {
+    blue: {
+      iconBg: "bg-blue-50",
+      iconText: "text-[#08679f]",
+      iconBorder: "border-blue-100",
+      glow: "group-hover:shadow-blue-100/60",
+    },
 
-    return (
+    amber: {
+      iconBg: "bg-amber-50",
+      iconText: "text-amber-600",
+      iconBorder: "border-amber-100",
+      glow: "group-hover:shadow-amber-100/60",
+    },
 
-        <div
-            onClick={onClick}
-            className={`
-                bg-white
-                rounded-2xl
-                border
-                border-gray-100
-                p-5
-                transition-all
-                duration-200
-                shadow-sm
-                ${
-                    onClick
-                        ? "cursor-pointer hover:shadow-lg hover:-translate-y-1"
-                        : ""
-                }
-            `}
-        >
+    rose: {
+      iconBg: "bg-rose-50",
+      iconText: "text-rose-600",
+      iconBorder: "border-rose-100",
+      glow: "group-hover:shadow-rose-100/60",
+    },
 
-            {/* ==================================================
-                TOP SECTION
-            ================================================== */}
+    emerald: {
+      iconBg: "bg-emerald-50",
+      iconText: "text-emerald-600",
+      iconBorder: "border-emerald-100",
+      glow: "group-hover:shadow-emerald-100/60",
+    },
 
-            <div className="flex items-start justify-between">
+    indigo: {
+      iconBg: "bg-indigo-50",
+      iconText: "text-indigo-600",
+      iconBorder: "border-indigo-100",
+      glow: "group-hover:shadow-indigo-100/60",
+    },
+  };
 
-                {/* ==================================================
-                    TITLE
-                ================================================== */}
+  const activeTheme =
+    colorStyles[color] || colorStyles.blue;
 
-                <div>
+  return (
+    <div
+      onClick={onClick}
+      className={`
+        group
+        relative
+        overflow-hidden
+        rounded-[20px]
+        border
+        border-slate-200/80
+        bg-white
+        p-4
+        shadow-[0_6px_25px_rgba(15,23,42,0.035)]
+        transition-all
+        duration-300
+        ${activeTheme.glow}
+        ${
+          onClick
+            ? "cursor-pointer hover:-translate-y-1 hover:shadow-lg active:translate-y-0"
+            : "hover:-translate-y-0.5 hover:shadow-md"
+        }
+      `}
+    >
 
-                    <p className="text-sm font-medium text-gray-500">
+      {/* Subtle decorative glow */}
 
-                        {title}
+      <div
+        className={`
+          pointer-events-none
+          absolute
+          -right-8
+          -top-8
+          h-20
+          w-20
+          rounded-full
+          opacity-0
+          blur-2xl
+          transition-opacity
+          duration-300
+          group-hover:opacity-100
+          ${activeTheme.iconBg}
+        `}
+      />
 
-                    </p>
+      <div className="relative flex items-start justify-between gap-3">
 
-                    <h2 className="text-3xl font-bold text-gray-900 mt-2">
+        {/* TEXT */}
 
-                        {value}
+        <div className="min-w-0 flex-1">
 
-                    </h2>
+          <p className="mb-2 truncate text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            {title}
+          </p>
 
-                </div>
+          <h2 className="truncate text-[25px] font-black tracking-[-0.04em] text-slate-900">
+            {value}
+          </h2>
 
-
-                {/* ==================================================
-                    ICON
-                ================================================== */}
-
-                <div
-                    className={`
-                        w-12
-                        h-12
-                        rounded-xl
-                        flex
-                        items-center
-                        justify-center
-                        ${iconBg}
-                        ${iconColor}
-                    `}
-                >
-
-                    {icon}
-
-                </div>
-
-            </div>
-
-
-            {/* ==================================================
-                SUBTITLE
-            ================================================== */}
-
-            {subtitle && (
-
-                <p className="text-sm text-gray-500 mt-4">
-
-                    {subtitle}
-
-                </p>
-
-            )}
+          {subtitle && (
+            <p className="mt-1.5 truncate text-[9px] font-medium text-slate-400">
+              {subtitle}
+            </p>
+          )}
 
         </div>
 
-    );
+        {/* ICON */}
 
+        <div
+          className={`
+            flex
+            h-10
+            w-10
+            shrink-0
+            items-center
+            justify-center
+            rounded-xl
+            border
+            ${activeTheme.iconBg}
+            ${activeTheme.iconText}
+            ${activeTheme.iconBorder}
+            transition-all
+            duration-300
+            group-hover:scale-105
+            group-hover:rotate-1
+          `}
+        >
+          {icon}
+        </div>
+
+      </div>
+
+    </div>
+  );
 }
-
-
-// ==========================================================
-// EXPORT
-// ==========================================================
 
 export default DashboardCard;
