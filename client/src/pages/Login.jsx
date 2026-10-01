@@ -38,57 +38,51 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-50 text-slate-900">
+    <div className="min-h-screen relative overflow-hidden bg-[#F6F8FC] text-slate-900 font-sans">
       {/* Background decoration */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-blue-200/40 blur-3xl" />
-
-        <div className="absolute -right-32 top-1/4 h-96 w-96 rounded-full bg-cyan-200/30 blur-3xl" />
-
-        <div className="absolute -bottom-45 left-1/3 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
-
-        <div className="absolute inset-0 bg-linear-to-br from-white via-slate-50/80 to-blue-50/70" />
+        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#08679F]/10 blur-3xl" />
+        <div className="absolute -right-32 top-1/4 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="absolute inset-0 bg-linear-to-br from-[#FFFFFF] via-[#F6F8FC]/80 to-[#F8FAFC]/90" />
       </div>
 
       {/* Main content */}
       <main className="relative z-10 min-h-screen flex items-center justify-center px-5 py-10 lg:px-10">
         <div className="w-full max-w-6xl">
-
           <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
 
             {/* =========================================================
                 LEFT - LOGIN CARD
             ========================================================== */}
             <section className="w-full max-w-md mx-auto lg:mx-0">
-
               <div
                 className="
-                  rounded-[28px]
-                  border border-white/70
-                  bg-white/75
+                  rounded-[22px]
+                  border border-slate-200/80
+                  bg-white/80
                   p-7 sm:p-9
-                  shadow-[0_25px_70px_rgba(15,23,42,0.12)]
-                  backdrop-blur-2xl
+                  shadow-[0_8px_30px_rgba(15,23,42,0.04)]
+                  backdrop-blur-xl
                   animate-login-card
                 "
               >
-
-                {/* Logo */}
+                {/* Logo / Medical Icon */}
                 <div className="flex justify-center mb-6">
                   <div
                     className="
                       relative
                       flex h-14 w-14 items-center justify-center
                       rounded-2xl
-                      border border-blue-100
-                      bg-gradient-to-rbg-gradient-to-br from-blue-50 to-cyan-50
+                      border border-slate-100
+                      bg-linear-to-br from-blue-50 to-slate-50
                       shadow-sm
                     "
                   >
                     <div className="relative">
-                      {/* Medical cross */}
-                      <span className="absolute left-1/2 top-0 h-6 w-2 -translate-x-1/2 rounded-full bg-blue-600" />
-                      <span className="absolute left-0 top-1/2 h-2 w-6 -translate-y-1/2 rounded-full bg-blue-600" />
+                      {/* Medical Cross Icon */}
+                      <span className="absolute left-1/2 top-0 h-6 w-2 -translate-x-1/2 rounded-full bg-[#08679F]" />
+                      <span className="absolute left-0 top-1/2 h-2 w-6 -translate-y-1/2 rounded-full bg-[#08679F]" />
                     </div>
 
                     <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
@@ -97,29 +91,27 @@ function Login() {
 
                 {/* Heading */}
                 <div className="text-center mb-7">
-                  <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
-                    Welcome Back!
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+                    Welcome Back
                   </h1>
-
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-1.5 text-xs sm:text-sm font-medium text-slate-500">
                     Hospital Management System
                   </p>
                 </div>
 
-                {/* Authentication method switch */}
-                <div className="mb-6 rounded-xl bg-slate-100/80 p-1 border border-slate-200/70">
+                {/* Authentication Method Switcher */}
+                <div className="mb-6 rounded-xl bg-slate-100/90 p-1 border border-slate-200/60">
                   <div className="grid grid-cols-2 gap-1">
-
                     <button
                       type="button"
                       onClick={() => setUsePassword(false)}
                       className={`
                         rounded-lg px-3 py-2.5
-                        text-xs sm:text-sm font-medium
+                        text-xs sm:text-sm font-semibold
                         transition-all duration-200
                         ${
                           !usePassword
-                            ? "bg-white text-blue-700 shadow-sm"
+                            ? "bg-white text-[#08679F] shadow-sm"
                             : "text-slate-500 hover:text-slate-700"
                         }
                       `}
@@ -132,13 +124,7 @@ function Login() {
                           stroke="currentColor"
                           strokeWidth="1.8"
                         >
-                          <rect
-                            x="5"
-                            y="3"
-                            width="14"
-                            height="18"
-                            rx="2"
-                          />
+                          <rect x="5" y="3" width="14" height="18" rx="2" />
                           <circle cx="9" cy="8" r="1" />
                           <circle cx="15" cy="8" r="1" />
                           <circle cx="9" cy="13" r="1" />
@@ -146,7 +132,6 @@ function Login() {
                           <circle cx="9" cy="18" r="1" />
                           <circle cx="15" cy="18" r="1" />
                         </svg>
-
                         4-Digit MPIN
                       </span>
                     </button>
@@ -156,11 +141,11 @@ function Login() {
                       onClick={() => setUsePassword(true)}
                       className={`
                         rounded-lg px-3 py-2.5
-                        text-xs sm:text-sm font-medium
+                        text-xs sm:text-sm font-semibold
                         transition-all duration-200
                         ${
                           usePassword
-                            ? "bg-white text-blue-700 shadow-sm"
+                            ? "bg-white text-[#08679F] shadow-sm"
                             : "text-slate-500 hover:text-slate-700"
                         }
                       `}
@@ -173,31 +158,22 @@ function Login() {
                           stroke="currentColor"
                           strokeWidth="1.8"
                         >
-                          <rect
-                            x="3"
-                            y="10"
-                            width="18"
-                            height="11"
-                            rx="2"
-                          />
+                          <rect x="3" y="10" width="18" height="11" rx="2" />
                           <path d="M7 10V7a5 5 0 0 1 10 0v3" />
                         </svg>
-
                         Password
                       </span>
                     </button>
-
                   </div>
                 </div>
 
-                {/* Login form */}
-                <form onSubmit={handleLogin} className="space-y-5">
-
+                {/* Form */}
+                <form onSubmit={handleLogin} className="space-y-4">
                   {/* Email */}
                   <div>
                     <label
                       htmlFor="email"
-                      className="mb-2 block text-sm font-medium text-slate-700"
+                      className="mb-1.5 block text-xs font-semibold text-slate-700"
                     >
                       Email Address
                     </label>
@@ -210,13 +186,7 @@ function Login() {
                         stroke="currentColor"
                         strokeWidth="1.8"
                       >
-                        <rect
-                          x="3"
-                          y="5"
-                          width="18"
-                          height="14"
-                          rx="2"
-                        />
+                        <rect x="3" y="5" width="18" height="14" rx="2" />
                         <path d="m3 7 9 6 9-6" />
                       </svg>
 
@@ -229,31 +199,30 @@ function Login() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="
                           w-full
+                          h-11
                           rounded-xl
-                          border border-slate-200
-                          bg-white/80
-                          py-3.5 pl-11 pr-4
+                          border border-slate-300
+                          bg-white
+                          py-2.5 pl-11 pr-4
                           text-sm text-slate-800
                           placeholder:text-slate-400
                           outline-none
-                          transition-all duration-200
-                          focus:border-blue-400
-                          focus:bg-white
+                          transition-all duration-150
+                          focus:border-[#08679F]
                           focus:ring-4
-                          focus:ring-blue-500/10
+                          focus:ring-[#08679F]/10
                         "
                       />
                     </div>
                   </div>
 
-                  {/* MPIN */}
+                  {/* MPIN Field */}
                   {!usePassword ? (
                     <div>
-
-                      <div className="mb-2 flex items-center justify-between">
+                      <div className="mb-1.5 flex items-center justify-between">
                         <label
                           htmlFor="mpin"
-                          className="text-sm font-medium text-slate-700"
+                          className="text-xs font-semibold text-slate-700"
                         >
                           4-Digit Security MPIN
                         </label>
@@ -262,10 +231,10 @@ function Login() {
                           type="button"
                           onClick={() => setUsePassword(true)}
                           className="
-                            text-xs font-medium
-                            text-blue-600
+                            text-xs font-semibold
+                            text-[#08679F]
                             transition-colors
-                            hover:text-blue-700
+                            hover:text-[#07557F]
                           "
                         >
                           Forgot MPIN?
@@ -280,13 +249,7 @@ function Login() {
                           stroke="currentColor"
                           strokeWidth="1.8"
                         >
-                          <rect
-                            x="3"
-                            y="10"
-                            width="18"
-                            height="11"
-                            rx="2"
-                          />
+                          <rect x="3" y="10" width="18" height="11" rx="2" />
                           <path d="M7 10V7a5 5 0 0 1 10 0v3" />
                         </svg>
 
@@ -301,10 +264,11 @@ function Login() {
                           onChange={(e) => setMpin(e.target.value)}
                           className="
                             w-full
+                            h-11
                             rounded-xl
-                            border border-slate-200
-                            bg-white/80
-                            py-3.5 pl-11 pr-4
+                            border border-slate-300
+                            bg-white
+                            py-2.5 pl-11 pr-4
                             text-sm
                             tracking-[0.35em]
                             font-mono
@@ -313,29 +277,24 @@ function Login() {
                             placeholder:tracking-normal
                             placeholder:font-sans
                             outline-none
-                            transition-all duration-200
-                            focus:border-blue-400
-                            focus:bg-white
+                            transition-all duration-150
+                            focus:border-[#08679F]
                             focus:ring-4
-                            focus:ring-blue-500/10
+                            focus:ring-[#08679F]/10
                           "
                         />
                       </div>
-
-                      <p className="mt-2 text-[11px] text-slate-400">
+                      <p className="mt-1.5 text-[11px] text-slate-400 font-medium">
                         Enter your security PIN to continue.
                       </p>
-
                     </div>
                   ) : (
-
-                    /* PASSWORD */
+                    /* Password Field */
                     <div>
-
-                      <div className="mb-2 flex items-center justify-between">
+                      <div className="mb-1.5 flex items-center justify-between">
                         <label
                           htmlFor="password"
-                          className="text-sm font-medium text-slate-700"
+                          className="text-xs font-semibold text-slate-700"
                         >
                           Account Password
                         </label>
@@ -344,10 +303,10 @@ function Login() {
                           type="button"
                           onClick={() => setUsePassword(false)}
                           className="
-                            text-xs font-medium
-                            text-blue-600
+                            text-xs font-semibold
+                            text-[#08679F]
                             transition-colors
-                            hover:text-blue-700
+                            hover:text-[#07557F]
                           "
                         >
                           Use MPIN instead
@@ -362,13 +321,7 @@ function Login() {
                           stroke="currentColor"
                           strokeWidth="1.8"
                         >
-                          <rect
-                            x="3"
-                            y="10"
-                            width="18"
-                            height="11"
-                            rx="2"
-                          />
+                          <rect x="3" y="10" width="18" height="11" rx="2" />
                           <path d="M7 10V7a5 5 0 0 1 10 0v3" />
                         </svg>
 
@@ -381,62 +334,59 @@ function Login() {
                           onChange={(e) => setPassword(e.target.value)}
                           className="
                             w-full
+                            h-11
                             rounded-xl
-                            border border-slate-200
-                            bg-white/80
-                            py-3.5 pl-11 pr-4
+                            border border-slate-300
+                            bg-white
+                            py-2.5 pl-11 pr-4
                             text-sm
                             text-slate-800
                             placeholder:text-slate-400
                             outline-none
-                            transition-all duration-200
-                            focus:border-blue-400
-                            focus:bg-white
+                            transition-all duration-150
+                            focus:border-[#08679F]
                             focus:ring-4
-                            focus:ring-blue-500/10
+                            focus:ring-[#08679F]/10
                           "
                         />
                       </div>
-
                     </div>
                   )}
 
-                  {/* Authenticate */}
+                  {/* Submit Button */}
                   <button
                     type="submit"
                     className="
                       group
                       relative
                       w-full
-                      overflow-hidden
+                      h-11
+                      mt-2
                       rounded-xl
-                      bg-linear-to-r
-                      from-blue-700
-                      to-blue-600
+                      bg-[#08679F]
+                      hover:bg-[#07557F]
                       px-5
-                      py-3.5
                       text-sm
                       font-semibold
                       text-white
-                      shadow-lg
-                      shadow-blue-600/20
+                      shadow-md
+                      shadow-[#08679F]/20
                       transition-all
-                      duration-200
+                      duration-150
                       hover:-translate-y-0.5
-                      hover:shadow-xl
-                      hover:shadow-blue-600/25
+                      hover:shadow-lg
+                      hover:shadow-[#08679F]/25
                       active:translate-y-0
                       active:scale-[0.99]
                       focus:outline-none
                       focus:ring-4
-                      focus:ring-blue-500/20
+                      focus:ring-[#08679F]/20
                     "
                   >
                     <span className="relative z-10 inline-flex items-center justify-center gap-2">
                       Authenticate
-
                       <svg
-                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+                        className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-1"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -447,15 +397,13 @@ function Login() {
                       </svg>
                     </span>
                   </button>
-
                 </form>
 
-                {/* Small footer */}
-                <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-slate-400">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Hospital staff access
+                {/* Subtitle / Status Footer */}
+                <div className="mt-6 flex items-center justify-center gap-2 text-[11px] font-medium text-slate-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Clinical workspace ready
                 </div>
-
               </div>
             </section>
 
@@ -463,61 +411,51 @@ function Login() {
                 RIGHT - VISUAL PANEL
             ========================================================== */}
             <section className="hidden lg:flex items-center justify-center">
-
               <div className="relative w-full max-w-xl">
-
-                {/* Decorative glass panel */}
+                {/* Decorative Glass Card */}
                 <div
                   className="
                     relative
                     overflow-hidden
-                    rounded-[36px]
-                    border border-white/70
-                    bg-white/45
-                    p-10
-                    shadow-[0_30px_80px_rgba(15,23,42,0.08)]
-                    backdrop-blur-2xl
+                    rounded-3xl
+                    border border-slate-200/80
+                    bg-white/60
+                    p-9
+                    shadow-[0_8px_30px_rgba(15,23,42,0.04)]
+                    backdrop-blur-xl
                   "
                 >
-
-                  {/* Background circles */}
-                  <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-blue-200/40 blur-2xl" />
-                  <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-cyan-200/30 blur-2xl" />
+                  {/* Subtle Accent Glows */}
+                  <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#08679F]/10 blur-2xl" />
+                  <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-cyan-500/10 blur-2xl" />
 
                   <div className="relative">
-
-                    {/* Medical icon */}
-                    <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-600/20">
-
-                      <div className="relative h-7 w-7">
-                        <span className="absolute left-1/2 top-0 h-7 w-2 -translate-x-1/2 rounded-full bg-white" />
-                        <span className="absolute left-0 top-1/2 h-2 w-7 -translate-y-1/2 rounded-full bg-white" />
+                    {/* Header Icon */}
+                    <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#08679F] text-white shadow-md shadow-[#08679F]/20">
+                      <div className="relative h-6 w-6">
+                        <span className="absolute left-1/2 top-0 h-6 w-2 -translate-x-1/2 rounded-full bg-white" />
+                        <span className="absolute left-0 top-1/2 h-2 w-6 -translate-y-1/2 rounded-full bg-white" />
                       </div>
-
                     </div>
 
-                    <p className="mb-3 text-sm font-medium text-blue-600">
-                      Hospital Management System
+                    <p className="mb-2 text-xs font-semibold text-[#08679F] uppercase tracking-wider">
+                      Modern Clinical Workspace
                     </p>
 
-                    <h2 className="max-w-lg text-3xl font-semibold leading-tight tracking-tight text-slate-900 xl:text-4xl">
+                    <h2 className="max-w-lg text-2xl xl:text-3xl font-bold leading-tight tracking-tight text-slate-900">
                       Everything your clinical team needs,
-                      <span className="text-blue-600">
-                        {" "}in one workspace.
-                      </span>
+                      <span className="text-[#08679F]"> in one workspace.</span>
                     </h2>
 
-                    <p className="mt-5 max-w-lg text-sm leading-7 text-slate-500">
-                      Manage patients, appointments, clinical information,
-                      admissions and hospital workflows through one
-                      centralized system.
+                    <p className="mt-4 max-w-lg text-sm leading-relaxed text-slate-500">
+                      Manage patients, appointments, clinical notes, admissions,
+                      and hospital workflows through one unified, centralized system.
                     </p>
 
-                    {/* Feature cards */}
+                    {/* Feature Cards Grid */}
                     <div className="mt-8 grid grid-cols-3 gap-3">
-
-                      <div className="rounded-2xl border border-white/80 bg-white/65 p-4 backdrop-blur-xl">
-                        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                      <div className="rounded-xl border border-slate-200/80 bg-white/80 p-4 backdrop-blur-md">
+                        <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-[#08679F]">
                           <svg
                             className="h-5 w-5"
                             viewBox="0 0 24 24"
@@ -531,18 +469,16 @@ function Login() {
                             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                           </svg>
                         </div>
-
                         <p className="text-xs font-semibold text-slate-800">
                           Patients
                         </p>
-
-                        <p className="mt-1 text-[11px] text-slate-400">
-                          Records
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          Records & History
                         </p>
                       </div>
 
-                      <div className="rounded-2xl border border-white/80 bg-white/65 p-4 backdrop-blur-xl">
-                        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                      <div className="rounded-xl border border-slate-200/80 bg-white/80 p-4 backdrop-blur-md">
+                        <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
                           <svg
                             className="h-5 w-5"
                             viewBox="0 0 24 24"
@@ -554,18 +490,16 @@ function Login() {
                             <path d="M16 2v4M8 2v4M3 10h18" />
                           </svg>
                         </div>
-
                         <p className="text-xs font-semibold text-slate-800">
                           Appointments
                         </p>
-
-                        <p className="mt-1 text-[11px] text-slate-400">
+                        <p className="mt-0.5 text-[11px] text-slate-400">
                           Scheduling
                         </p>
                       </div>
 
-                      <div className="rounded-2xl border border-white/80 bg-white/65 p-4 backdrop-blur-xl">
-                        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                      <div className="rounded-xl border border-slate-200/80 bg-white/80 p-4 backdrop-blur-md">
+                        <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-[#6366F1]">
                           <svg
                             className="h-5 w-5"
                             viewBox="0 0 24 24"
@@ -576,56 +510,50 @@ function Login() {
                             <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
                           </svg>
                         </div>
-
                         <p className="text-xs font-semibold text-slate-800">
-                          Clinical Notes
+                          Clinical AI
                         </p>
-
-                        <p className="mt-1 text-[11px] text-slate-400">
-                          Collaboration
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          Summaries & Chat
                         </p>
                       </div>
-
                     </div>
-
                   </div>
                 </div>
 
-                {/* Decorative floating element */}
+                {/* Floating Status Badge */}
                 <div
                   className="
                     absolute
-                    -bottom-5
-                    right-8
+                    -bottom-4
+                    right-6
                     hidden
-                    rounded-2xl
+                    rounded-xl
                     border
-                    border-white/80
-                    bg-white/75
+                    border-slate-200/80
+                    bg-white/90
                     px-4
-                    py-3
-                    shadow-lg
-                    backdrop-blur-xl
+                    py-2.5
+                    shadow-md
+                    backdrop-blur-md
                     xl:flex
                     items-center
                     gap-3
                     animate-float
                   "
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   </span>
-
                   <div>
                     <p className="text-xs font-semibold text-slate-800">
-                      Clinical workspace
+                      System Active
                     </p>
-                    <p className="text-[10px] text-slate-400">
-                      Ready for staff access
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      Secure login connection
                     </p>
                   </div>
                 </div>
-
               </div>
             </section>
 
@@ -633,12 +561,12 @@ function Login() {
         </div>
       </main>
 
-      {/* Custom animations */}
+      {/* Animation Styles */}
       <style>{`
         @keyframes loginCardIn {
           from {
             opacity: 0;
-            transform: translateY(14px) scale(0.985);
+            transform: translateY(12px) scale(0.98);
           }
           to {
             opacity: 1;
@@ -651,16 +579,16 @@ function Login() {
             transform: translateY(0);
           }
           50% {
-            transform: translateY(-5px);
+            transform: translateY(-4px);
           }
         }
 
         .animate-login-card {
-          animation: loginCardIn 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+          animation: loginCardIn 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
         .animate-float {
-          animation: floatElement 4s ease-in-out infinite;
+          animation: floatElement 3.5s ease-in-out infinite;
         }
 
         @media (prefers-reduced-motion: reduce) {
