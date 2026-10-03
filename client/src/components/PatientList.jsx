@@ -158,7 +158,7 @@ function PatientList({ refreshPatients, searchTerm, sortBy, sortOrder }) {
   const renderRoleScopeBadge = () => {
     if (userRole === "doctor") {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-[#08679F] border border-sky-200/60">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-[#08679F] border border-sky-200/60">
           <span className="h-1.5 w-1.5 rounded-full bg-[#08679F]"></span>
           Assigned Patients Only
         </span>
@@ -166,7 +166,7 @@ function PatientList({ refreshPatients, searchTerm, sortBy, sortOrder }) {
     }
     if (userRole === "staff" || userRole === "nurse") {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
           Admitted / Ward Patients
         </span>
@@ -174,7 +174,7 @@ function PatientList({ refreshPatients, searchTerm, sortBy, sortOrder }) {
     }
     if (userRole === "admin") {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/60">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/60">
           <span className="h-1.5 w-1.5 rounded-full bg-purple-500"></span>
           All Patients (Admin View)
         </span>
@@ -188,7 +188,7 @@ function PatientList({ refreshPatients, searchTerm, sortBy, sortOrder }) {
   // ==========================================================
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="p-5 sm:p-6 space-y-4 rounded-[22px] border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
         <div className="flex items-center justify-between">
           <div className="h-6 w-32 bg-slate-100 rounded-md animate-pulse"></div>
           <div className="h-4 w-24 bg-slate-100 rounded-md animate-pulse"></div>
@@ -206,17 +206,17 @@ function PatientList({ refreshPatients, searchTerm, sortBy, sortOrder }) {
   // UI
   // ==========================================================
   return (
-    <div className="space-y-4">
+    <div className="p-5 sm:p-6 space-y-5 rounded-[22px] border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+        <div className="space-y-1">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-tight">
               Patient Directory
             </h2>
             {renderRoleScopeBadge()}
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs font-medium text-slate-500">
             {userRole === "doctor" && "Viewing clinical roster assigned to you"}
             {userRole === "staff" && "Viewing patients currently assigned to ward beds"}
             {userRole === "admin" && "Full administrative patient directory access"}
@@ -225,9 +225,11 @@ function PatientList({ refreshPatients, searchTerm, sortBy, sortOrder }) {
         </div>
 
         {/* PATIENT COUNT */}
-        <div className="text-xs font-medium text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60 self-start sm:self-auto">
-          Showing <span className="font-semibold text-slate-900">{filteredPatients.length}</span> of{" "}
-          <span className="font-semibold text-slate-900">{patients.length}</span>
+        <div className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/70 shrink-0 self-start sm:self-center">
+          <span>Showing</span>
+          <span className="font-bold text-[#08679F]">{filteredPatients.length}</span>
+          <span>of</span>
+          <span className="font-bold text-slate-900">{patients.length}</span>
         </div>
       </div>
 
@@ -236,8 +238,8 @@ function PatientList({ refreshPatients, searchTerm, sortBy, sortOrder }) {
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs sm:text-sm">
           <svg className="h-4 w-4 shrink-0 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
+            <line x1="12" y1="8" x2="12" />
+            <line x1="12" y1="16" x2="12.01" />
           </svg>
           {error}
         </div>
@@ -275,7 +277,7 @@ function PatientList({ refreshPatients, searchTerm, sortBy, sortOrder }) {
         </div>
       ) : (
         /* PATIENT TABLE */
-        <div className="overflow-hidden rounded-xl border border-slate-200/80">
+        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
               <thead>
@@ -299,7 +301,7 @@ function PatientList({ refreshPatients, searchTerm, sortBy, sortOrder }) {
                     <td className="py-3.5 px-4 font-semibold text-[#08679F]">
                       {patient.patient_id || patient.id || "—"}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">
+                    <td className="py-3.5 px-4 font-semibold text-slate-900 capitalize">
                       {patient.patient_name || "—"}
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">

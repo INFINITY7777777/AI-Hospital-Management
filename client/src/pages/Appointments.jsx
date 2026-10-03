@@ -69,11 +69,9 @@ function Appointments() {
             to="/dashboard"
             className="
               inline-flex items-center gap-2 h-9 px-3.5 rounded-xl
-              bg-white border border-slate-200 text-slate-600
-              hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300
+              bg-white border border-slate-200 text-[#08679F] hover:bg-slate-50 hover:border-slate-300
               text-xs font-semibold shadow-xs transition-all duration-150
-              active:scale-[0.99]
-              focus:outline-none focus:ring-4 focus:ring-slate-200
+              active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-slate-200
             "
           >
             <svg

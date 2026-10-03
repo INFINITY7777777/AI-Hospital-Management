@@ -172,12 +172,10 @@ function Admissions() {
           <Link
             to="/dashboard"
             className="
-              inline-flex h-9 items-center gap-2 rounded-xl
-              border border-slate-200 bg-white px-3.5
-              text-xs font-semibold text-slate-700
-              shadow-sm transition-all duration-150
-              hover:border-slate-300 hover:bg-slate-50
-              focus:outline-none focus:ring-4 focus:ring-slate-100
+              inline-flex items-center gap-2 h-9 px-3.5 rounded-xl
+              bg-white border border-slate-200 text-[#08679F] hover:bg-slate-50 hover:border-slate-300
+              text-xs font-semibold shadow-xs transition-all duration-150
+              active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-slate-200
             "
           >
             <svg

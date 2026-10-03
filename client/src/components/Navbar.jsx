@@ -122,7 +122,7 @@ function Navbar({ onOpenSearch }) {
               md:inline-block
             "
           >
-            ⌘K
+            Ctrl + K / ⌘ K
           </kbd>
 
         </button>
