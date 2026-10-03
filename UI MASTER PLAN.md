@@ -86,14 +86,14 @@ Patient Details contains:
 
 ## Beds — 4 pages
 13. Bed List — `/beds`
-14. Add Bed — `/beds/add`
+14. Add Bed — `/beds/add` 
 15. Edit Bed — `/beds/edit/:id`
 16. Bed Details — `/beds/:id`
 
 ## Admissions — 4 pages
 17. Admissions — `/admissions`
 18. Add Admission — `/admissions/add`
-19. Admission Details — `/admissions/:id`
+19. Admission Details — `/admissions/:id` 
 20. Edit Admission — `/admissions/:id/edit`
 
 ## Pharmacy — 1 page

@@ -1,8 +1,9 @@
 // ==========================================================
-// REACT HOOKS
+// REACT HOOKS & ROUTER
 // ==========================================================
 
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 // ==========================================================
 // API CLIENT
@@ -11,489 +12,268 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 
 // ==========================================================
-// REACT ROUTER
-// ==========================================================
-
-import { Link, useNavigate } from "react-router-dom";
-
-// ==========================================================
 // DOCTOR LIST COMPONENT
 // ==========================================================
 
 function DoctorList({ refreshDoctors }) {
-
-    // ==========================================================
-    // DOCTOR STATE
-    // ==========================================================
-
-    const [doctors, setDoctors] = useState([]);
-
-    // ==========================================================
-    // LOADING STATE
-    // ==========================================================
-
-    const [loading, setLoading] = useState(true);
-
-    // ==========================================================
-    // ERROR STATE
-    // ==========================================================
-
-    const [error, setError] = useState("");
-
-    // ==========================================================
-    // NAVIGATION
-    // ==========================================================
-
-    const navigate = useNavigate();
-
-    // ==========================================================
-    // FETCH DOCTORS
-    // ==========================================================
-
-    useEffect(() => {
-
-        let isMounted = true;
-
-        // ======================================================
-        // FETCH FUNCTION
-        // ======================================================
-
-        const fetchDoctors = async () => {
-
-            try {
-
-                // ==================================================
-                // START LOADING
-                // ==================================================
-
-                if (isMounted) {
-
-                    setLoading(true);
-                    setError("");
-
-                }
-
-                // ==================================================
-                // API REQUEST
-                // ==================================================
-                //
-                // IMPORTANT:
-                // Use "api" instead of "axios".
-                //
-                // api.js automatically adds:
-                //
-                // Authorization: Bearer <token>
-                //
-                // ==================================================
-
-                const response = await api.get(
-                    "/doctors"
-                );
-
-                // ==================================================
-                // DEBUG
-                // ==================================================
-
-                console.log(
-                    "[DoctorList] Doctors response:",
-                    response.data
-                );
-
-                // ==================================================
-                // STORE DOCTORS
-                // ==================================================
-
-                if (isMounted) {
-
-                    setDoctors(
-                        response.data.doctors || []
-                    );
-
-                }
-
-            }
-
-            catch (error) {
-
-                // ==================================================
-                // DEBUG
-                // ==================================================
-
-                console.error(
-                    "[DoctorList] Error fetching doctors:",
-                    error
-                );
-
-                console.error(
-                    "[DoctorList] Status:",
-                    error.response?.status
-                );
-
-                console.error(
-                    "[DoctorList] Response:",
-                    error.response?.data
-                );
-
-                // ==================================================
-                // UNAUTHORIZED
-                // ==================================================
-
-                if (
-                    error.response?.status === 401
-                ) {
-
-                    localStorage.removeItem("token");
-
-                    if (isMounted) {
-
-                        setError(
-                            "Your session has expired. Please login again."
-                        );
-
-                    }
-
-                    // ==================================================
-                    // REDIRECT TO LOGIN
-                    // ==================================================
-
-                    navigate("/");
-
-                    return;
-
-                }
-
-                // ==================================================
-                // FORBIDDEN
-                // ==================================================
-
-                if (
-                    error.response?.status === 403
-                ) {
-
-                    if (isMounted) {
-
-                        setError(
-                            "You do not have permission to view doctors."
-                        );
-
-                    }
-
-                    return;
-
-                }
-
-                // ==================================================
-                // GENERAL ERROR
-                // ==================================================
-
-                if (isMounted) {
-
-                    setError(
-
-                        error.response?.data?.error ||
-
-                        "Failed to load doctors."
-
-                    );
-
-                }
-
-            }
-
-            finally {
-
-                // ==================================================
-                // STOP LOADING
-                // ==================================================
-
-                if (isMounted) {
-
-                    setLoading(false);
-
-                }
-
-            }
-
-        };
-
-        // ======================================================
-        // RUN FETCH
-        // ======================================================
-
-        fetchDoctors();
-
-        // ======================================================
-        // CLEANUP
-        // ======================================================
-
-        return () => {
-
-            isMounted = false;
-
-        };
-
-    }, [refreshDoctors, navigate]);
-
-    // ==========================================================
-    // LOADING SCREEN
-    // ==========================================================
-
-    if (loading) {
-
-        return (
-
-            <div className="bg-white rounded-xl shadow p-6 mt-6">
-
-                <h2 className="text-2xl font-bold mb-6">
-                    Doctor List
-                </h2>
-
-                <div className="space-y-3">
-
-                    <div className="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
-
-                    <div className="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
-
-                    <div className="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
-
-                </div>
-
-            </div>
-
-        );
-
-    }
-
-    // ==========================================================
-    // MAIN UI
-    // ==========================================================
-
+  // ==========================================================
+  // COMPONENT STATE
+  // ==========================================================
+
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const navigate = useNavigate();
+
+  // ==========================================================
+  // FETCH DOCTORS
+  // ==========================================================
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchDoctors = async () => {
+      try {
+        if (isMounted) {
+          setLoading(true);
+          setError("");
+        }
+
+        const response = await api.get("/doctors");
+
+        if (isMounted) {
+          setDoctors(response.data.doctors || []);
+        }
+      } catch (err) {
+        console.error("[DoctorList] Error fetching doctors:", err);
+
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          if (isMounted) {
+            setError("Your session has expired. Please login again.");
+          }
+          navigate("/");
+          return;
+        }
+
+        if (err.response?.status === 403) {
+          if (isMounted) {
+            setError("You do not have permission to view doctors.");
+          }
+          return;
+        }
+
+        if (isMounted) {
+          setError(err.response?.data?.error || "Failed to load doctors.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchDoctors();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshDoctors, navigate]);
+
+  // ==========================================================
+  // LOADING STATE SKELETON
+  // ==========================================================
+
+  if (loading) {
     return (
-
-        <div className="bg-white rounded-xl shadow p-6 mt-6">
-
-            {/* ==================================================
-                HEADER
-            ================================================== */}
-
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-
-                <div>
-
-                    <h2 className="text-2xl font-bold text-gray-900">
-                        Doctor List
-                    </h2>
-
-                    <p className="text-sm text-gray-500 mt-1">
-                        View and manage registered doctors
-                    </p>
-
-                </div>
-
-                <div className="text-sm text-gray-500">
-
-                    Total Doctors:{" "}
-
-                    <span className="font-semibold text-gray-900">
-
-                        {doctors.length}
-
-                    </span>
-
-                </div>
-
-            </div>
-
-            {/* ==================================================
-                ERROR MESSAGE
-            ================================================== */}
-
-            {error && (
-
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-
-                    {error}
-
-                </div>
-
-            )}
-
-            {/* ==================================================
-                EMPTY STATE
-            ================================================== */}
-
-            {doctors.length === 0 ? (
-
-                <div className="text-center py-12">
-
-                    <div className="text-5xl mb-4">
-                        🩺
-                    </div>
-
-                    <h3 className="text-lg font-semibold text-gray-900">
-                        No doctors found
-                    </h3>
-
-                    <p className="text-gray-500 mt-1">
-                        Add a doctor to see them listed here.
-                    </p>
-
-                </div>
-
-            ) : (
-
-                /* ==================================================
-                   DOCTOR TABLE
-                ================================================== */
-
-                <div className="overflow-x-auto">
-
-                    <table className="w-full">
-
-                        {/* ==================================================
-                            TABLE HEADER
-                        ================================================== */}
-
-                        <thead>
-
-                            <tr className="border-b bg-gray-50">
-
-                                <th className="text-left p-3 font-semibold text-gray-600">
-                                    Name
-                                </th>
-
-                                <th className="text-left p-3 font-semibold text-gray-600">
-                                    Specialization
-                                </th>
-
-                                <th className="text-left p-3 font-semibold text-gray-600">
-                                    Phone
-                                </th>
-
-                                <th className="text-left p-3 font-semibold text-gray-600">
-                                    Department
-                                </th>
-
-                                <th className="text-left p-3 font-semibold text-gray-600">
-                                    Experience
-                                </th>
-
-                                <th className="text-left p-3 font-semibold text-gray-600">
-                                    Actions
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        {/* ==================================================
-                            TABLE BODY
-                        ================================================== */}
-
-                        <tbody>
-
-                            {doctors.map((doctor) => (
-
-                                <tr
-                                    key={doctor.id}
-                                    className="border-b hover:bg-gray-50 transition"
-                                >
-
-                                    {/* ==================================================
-                                        NAME
-                                    ================================================== */}
-
-                                    <td className="p-3">
-
-                                        <Link
-                                            to={`/doctors/${doctor.id}`}
-                                            className="text-blue-600 font-semibold hover:underline"
-                                        >
-
-                                            {doctor.doctor_name || "—"}
-
-                                        </Link>
-
-                                    </td>
-
-                                    {/* ==================================================
-                                        SPECIALIZATION
-                                    ================================================== */}
-
-                                    <td className="p-3 text-gray-700">
-
-                                        {doctor.specialization || "—"}
-
-                                    </td>
-
-                                    {/* ==================================================
-                                        PHONE
-                                    ================================================== */}
-
-                                    <td className="p-3 text-gray-700">
-
-                                        {doctor.phone || "—"}
-
-                                    </td>
-
-                                    {/* ==================================================
-                                        DEPARTMENT
-                                    ================================================== */}
-
-                                    <td className="p-3 text-gray-700">
-
-                                        {doctor.department || "—"}
-
-                                    </td>
-
-                                    {/* ==================================================
-                                        EXPERIENCE
-                                    ================================================== */}
-
-                                    <td className="p-3 text-gray-700">
-
-                                        {doctor.experience !== null &&
-                                        doctor.experience !== undefined
-                                            ? `${doctor.experience} years`
-                                            : "—"}
-
-                                    </td>
-
-                                    {/* ==================================================
-                                        ACTIONS
-                                    ================================================== */}
-
-                                    <td className="p-3">
-
-                                        <Link
-                                            to={`/doctors/${doctor.id}`}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition inline-block"
-                                        >
-                                            View
-                                        </Link>
-
-                                    </td>
-
-                                </tr>
-
-                            ))}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            )}
-
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="h-5 w-32 bg-slate-100 rounded-md animate-pulse"></div>
+          <div className="h-4 w-20 bg-slate-100 rounded-md animate-pulse"></div>
+        </div>
+        <div className="space-y-3">
+          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse"></div>
+          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse"></div>
+          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================================
+  // MAIN UI RENDER
+  // ==========================================================
+
+  return (
+    <div className="space-y-5">
+      {/* SECTION HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+            Registered Physicians
+          </h2>
+          <p className="mt-0.5 text-xs font-medium text-slate-500">
+            View and manage active medical specialists in the system.
+          </p>
         </div>
 
-    );
+        <div className="inline-flex items-center gap-2 rounded-xl bg-slate-100/80 px-3 py-1.5 text-xs font-semibold text-slate-600">
+          Total Doctors:
+          <span className="text-[#08679F] font-bold">{doctors.length}</span>
+        </div>
+      </div>
 
+      {/* ERROR ALERT */}
+      {error && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs font-medium text-rose-700">
+          <svg
+            className="h-4 w-4 shrink-0 text-rose-500"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* EMPTY STATE */}
+      {doctors.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3">
+            <svg
+              className="h-6 w-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">
+            No Doctors Found
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 max-w-sm">
+            There are currently no registered doctors in the system. Use the registration form above to add a new physician.
+          </p>
+        </div>
+      ) : (
+        /* TABLE CONTAINER */
+        <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
+          <table className="w-full text-left text-xs text-slate-600">
+            {/* TABLE HEADER */}
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <th scope="col" className="px-4 py-3">
+                  Doctor Name
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Specialization
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Department
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Phone
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Experience
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+
+            {/* TABLE BODY */}
+            <tbody className="divide-y divide-slate-100">
+              {doctors.map((doctor) => (
+                <tr
+                  key={doctor.id}
+                  className="hover:bg-slate-50/60 transition-colors duration-150"
+                >
+                  {/* DOCTOR NAME */}
+                  <td className="px-4 py-3.5 font-semibold text-slate-900">
+                    <Link
+                      to={`/doctors/${doctor.id}`}
+                      className="hover:text-[#08679F] transition-colors"
+                    >
+                      {doctor.doctor_name || "—"}
+                    </Link>
+                  </td>
+
+                  {/* SPECIALIZATION */}
+                  <td className="px-4 py-3.5">
+                    <span className="inline-flex items-center rounded-lg bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-[#08679F] border border-sky-200/60">
+                      {doctor.specialization || "General"}
+                    </span>
+                  </td>
+
+                  {/* DEPARTMENT */}
+                  <td className="px-4 py-3.5 text-slate-700 font-medium">
+                    {doctor.department || "—"}
+                  </td>
+
+                  {/* PHONE */}
+                  <td className="px-4 py-3.5 text-slate-600">
+                    {doctor.phone || "—"}
+                  </td>
+
+                  {/* EXPERIENCE */}
+                  <td className="px-4 py-3.5 text-slate-600">
+                    {doctor.experience !== null && doctor.experience !== undefined ? (
+                      <span className="font-semibold text-slate-800">
+                        {doctor.experience} yrs
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+
+                  {/* ACTIONS */}
+                  <td className="px-4 py-3.5 text-right">
+                    <Link
+                      to={`/doctors/${doctor.id}`}
+                      className="
+                        inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg
+                        bg-slate-100 hover:bg-[#08679F] text-slate-700 hover:text-white
+                        text-xs font-semibold transition-all duration-150 active:scale-[0.98]
+                      "
+                    >
+                      <span>View</span>
+                      <svg
+                        className="h-3 w-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                        />
+                      </svg>
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }
-
-// ==========================================================
-// EXPORT
-// ==========================================================
 
 export default DoctorList;

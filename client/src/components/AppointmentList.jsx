@@ -93,6 +93,32 @@ function AppointmentList({
     return `${day}/${month}/${year}`;
   };
 
+  // Status Badge Rendering based on HMS Master Plan Semantic Colors
+  const renderStatusBadge = (status) => {
+    const statusLower = (status || "scheduled").toLowerCase();
+
+    switch (statusLower) {
+      case "completed":
+        return (
+          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/60">
+            Completed
+          </span>
+        );
+      case "cancelled":
+        return (
+          <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700 border border-rose-200/60">
+            Cancelled
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-[#08679F] border border-sky-200/60">
+            Scheduled
+          </span>
+        );
+    }
+  };
+
   // Filter list by selected segment tab and global search query
   const filteredAppointments = appointments.filter((appt) => {
     const apptDateStr = toLocalYYYYMMDD(appt.appointment_date);
@@ -116,58 +142,89 @@ function AppointmentList({
     return matchesFilter && matchesSearch;
   });
 
-  // Loading skeleton placeholder
+  // HMS Standard Skeleton Loader
   if (loading) {
     return (
-      <div className="space-y-3 p-2">
-        <div className="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
-        <div className="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
-        <div className="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="h-5 w-32 bg-slate-100 rounded-md animate-pulse"></div>
+          <div className="h-4 w-20 bg-slate-100 rounded-md animate-pulse"></div>
+        </div>
+        <div className="space-y-3">
+          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse"></div>
+          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse"></div>
+          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-5">
       {/* Header section displaying view summary & match count */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">
+          <h2 className="text-base font-bold text-slate-900 tracking-tight">
             {filter === "today"
               ? "Today's Schedule"
               : filter === "upcoming"
               ? "Upcoming Visits"
-              : "Appointment List"}
+              : "Appointments Queue"}
           </h2>
-          <p className="text-xs text-gray-500 mt-1">
-            View and manage patient appointments
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            View scheduled visits and patient appointments.
           </p>
         </div>
 
-        <div className="text-xs text-gray-500 whitespace-nowrap">
-          Showing:{" "}
-          <span className="font-semibold text-gray-900">
+        <div className="inline-flex items-center gap-2 rounded-xl bg-slate-100/80 px-3 py-1.5 text-xs font-semibold text-slate-600 self-start sm:self-auto">
+          <span>Showing:</span>
+          <span className="text-[#08679F] font-bold">
             {filteredAppointments.length}
-          </span>{" "}
-          of {appointments.length}
+          </span>
+          <span className="text-slate-400">/ {appointments.length}</span>
         </div>
       </div>
 
-      {/* Error Notice */}
+      {/* HMS Error Alert */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-xs">
-          {error}
+        <div className="flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs font-medium text-rose-700">
+          <svg
+            className="h-4 w-4 shrink-0 text-rose-500"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Empty State Handler */}
+      {/* HMS Empty State Handler */}
       {filteredAppointments.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-4xl mb-3">📅</div>
-          <h3 className="text-base font-semibold text-gray-900">
-            No appointments found
+        <div className="flex flex-col items-center justify-center py-12 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3">
+            <svg
+              className="h-6 w-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
+              />
+            </svg>
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">
+            No Appointments Found
           </h3>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="mt-1 text-xs text-slate-500 max-w-sm">
             {searchTerm
               ? `No appointments matching "${searchTerm}".`
               : filter === "today"
@@ -179,57 +236,72 @@ function AppointmentList({
         </div>
       ) : (
         /* Appointment Records Table */
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
+          <table className="w-full text-left text-xs text-slate-600">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="p-3 font-semibold text-gray-600">Patient</th>
-                <th className="p-3 font-semibold text-gray-600">Doctor</th>
-                <th className="p-3 font-semibold text-gray-600">Specialization</th>
-                <th className="p-3 font-semibold text-gray-600">Date</th>
-                <th className="p-3 font-semibold text-gray-600">Time</th>
-                <th className="p-3 font-semibold text-gray-600">Reason</th>
-                <th className="p-3 font-semibold text-gray-600">Status</th>
+              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <th scope="col" className="px-4 py-3">Patient</th>
+                <th scope="col" className="px-4 py-3">Doctor</th>
+                <th scope="col" className="px-4 py-3">Specialization</th>
+                <th scope="col" className="px-4 py-3">Date</th>
+                <th scope="col" className="px-4 py-3">Time</th>
+                <th scope="col" className="px-4 py-3">Reason</th>
+                <th scope="col" className="px-4 py-3">Status</th>
+                <th scope="col" className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {filteredAppointments.map((appointment) => (
                 <tr
                   key={appointment.id}
-                  onClick={() => navigate(`/appointments/${appointment.id}`)}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="hover:bg-slate-50/60 transition-colors duration-150"
                 >
-                  <td className="p-3 font-medium text-gray-900">
+                  <td className="px-4 py-3.5 font-semibold text-slate-900">
                     {appointment.patient_name || "—"}
                   </td>
-                  <td className="p-3 text-gray-700">
+                  <td className="px-4 py-3.5 text-slate-700 font-medium">
                     {appointment.doctor_name || "—"}
                   </td>
-                  <td className="p-3 text-gray-600">
+                  <td className="px-4 py-3.5 text-slate-600">
                     {appointment.specialization || "—"}
                   </td>
-                  <td className="p-3 text-gray-600 whitespace-nowrap">
+                  <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
                     {formatDateDisplay(appointment.appointment_date)}
                   </td>
-                  <td className="p-3 text-gray-600 whitespace-nowrap">
+                  <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap font-medium">
                     {appointment.appointment_time || "—"}
                   </td>
-                  <td className="p-3 text-gray-600 max-w-xs truncate">
+                  <td className="px-4 py-3.5 text-slate-600 max-w-xs truncate">
                     {appointment.reason || "N/A"}
                   </td>
-                  <td className="p-3">
-                    <span
-                      className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold ${
-                        appointment.status === "Completed"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : appointment.status === "Cancelled"
-                          ? "bg-rose-100 text-rose-700"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
+                  <td className="px-4 py-3.5">
+                    {renderStatusBadge(appointment.status)}
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
+                    <button
+                      onClick={() => navigate(`/appointments/${appointment.id}`)}
+                      className="
+                        inline-flex items-center gap-1.5 h-8 px-3 rounded-lg
+                        bg-slate-100 hover:bg-[#08679F] text-slate-700 hover:text-white
+                        text-xs font-semibold transition-all duration-150 active:scale-[0.98]
+                      "
                     >
-                      {appointment.status || "Scheduled"}
-                    </span>
+                      <span>View</span>
+                      <svg
+                        className="h-3 w-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                        />
+                      </svg>
+                    </button>
                   </td>
                 </tr>
               ))}

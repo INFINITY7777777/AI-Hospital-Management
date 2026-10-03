@@ -1,589 +1,377 @@
-// ==========================================================
-// REACT HOOKS
-// ==========================================================
-
 import { useEffect, useState } from "react";
-
-// ==========================================================
-// AXIOS
-// ==========================================================
-
-import axios from "axios";
-
-// ==========================================================
-// REACT ROUTER
-// ==========================================================
-
-import { useNavigate, useParams } from "react-router-dom";
-
-// ==========================================================
-// NAVBAR
-// ==========================================================
-
-import Navbar from "../components/Navbar";
-
-// ==========================================================
-// SIDEBAR
-// ==========================================================
-
-import Sidebar from "../components/Sidebar";
-
-// ==========================================================
-// EDIT ADMISSION
-// ==========================================================
+import { useNavigate, useParams, Link } from "react-router-dom";
+import api from "../services/api";
 
 function EditAdmission() {
-
-    // ==========================================================
-    // GET ADMISSION ID FROM URL
-    // ==========================================================
-
-    const { id } = useParams();
-
-    // ==========================================================
-    // NAVIGATION
-    // ==========================================================
-
-    const navigate = useNavigate();
-
-    // ==========================================================
-    // ADMISSION STATE
-    // ==========================================================
-
-    const [admission, setAdmission] = useState(null);
-
-    // ==========================================================
-    // FORM STATE
-    // ==========================================================
-
-    const [admissionDate, setAdmissionDate] = useState("");
-
-    const [admissionReason, setAdmissionReason] = useState("");
-
-    const [diagnosis, setDiagnosis] = useState("");
-
-    // ==========================================================
-    // LOADING STATE
-    // ==========================================================
-
-    const [loading, setLoading] = useState(true);
-
-    // ==========================================================
-    // SAVING STATE
-    // ==========================================================
-
-    const [saving, setSaving] = useState(false);
-
-    // ==========================================================
-    // ERROR STATE
-    // ==========================================================
-
-    const [error, setError] = useState("");
-
-    // ==========================================================
-    // LOAD ADMISSION
-    // ==========================================================
-
-    useEffect(() => {
-
-        const loadAdmission = async () => {
-
-            try {
-
-                setLoading(true);
-
-                setError("");
-
-                const response = await axios.get(
-                    `http://localhost:5000/api/admissions/${id}`
-                );
-
-                const data = response.data.admission;
-
-                setAdmission(data);
-
-                // ==================================================
-                // SET FORM VALUES
-                // ==================================================
-
-                setAdmissionDate(
-                    data.admission_date
-                        ? new Date(data.admission_date)
-                            .toISOString()
-                            .split("T")[0]
-                        : ""
-                );
-
-                setAdmissionReason(
-                    data.admission_reason || ""
-                );
-
-                setDiagnosis(
-                    data.diagnosis || ""
-                );
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "Error fetching admission:",
-                    error
-                );
-
-                setError(
-                    error.response?.data?.error ||
-                    "Failed to fetch admission"
-                );
-
-            }
-
-            finally {
-
-                setLoading(false);
-
-            }
-
-        };
-
-        loadAdmission();
-
-    }, [id]);
-
-    // ==========================================================
-    // UPDATE ADMISSION
-    // ==========================================================
-
-    const handleSubmit = async (event) => {
-
-        event.preventDefault();
-
-        // ==========================================================
-        // BASIC VALIDATION
-        // ==========================================================
-
-        if (!admissionDate) {
-
-            setError(
-                "Admission date is required"
-            );
-
-            return;
-
-        }
-
-        try {
-
-            setSaving(true);
-
-            setError("");
-
-            // ======================================================
-            // UPDATE API
-            // ======================================================
-
-            await axios.put(
-
-                `http://localhost:5000/api/admissions/${id}`,
-
-                {
-                    admissionDate,
-                    admissionReason,
-                    diagnosis
-                }
-
-            );
-
-            // ======================================================
-            // SUCCESS
-            // ======================================================
-
-            alert(
-                "Admission updated successfully"
-            );
-
-            // ======================================================
-            // RETURN TO DETAILS
-            // ======================================================
-
-            navigate(`/admissions/${id}`);
-
-        }
-
-        catch (error) {
-
-            console.error(
-                "Error updating admission:",
-                error
-            );
-
-            setError(
-                error.response?.data?.error ||
-                "Failed to update admission"
-            );
-
-        }
-
-        finally {
-
-            setSaving(false);
-
-        }
-
+  // ==========================================================
+  // GET ADMISSION ID FROM URL
+  // ==========================================================
+  const { id } = useParams();
+
+  // ==========================================================
+  // NAVIGATION
+  // ==========================================================
+  const navigate = useNavigate();
+
+  // ==========================================================
+  // ADMISSION & FORM STATES
+  // ==========================================================
+  const [admission, setAdmission] = useState(null);
+  const [admissionDate, setAdmissionDate] = useState("");
+  const [admissionReason, setAdmissionReason] = useState("");
+  const [diagnosis, setDiagnosis] = useState("");
+
+  // ==========================================================
+  // LOADING & ERROR STATES
+  // ==========================================================
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  // ==========================================================
+  // LOAD ADMISSION (FIXED: Using configured 'api' instance)
+  // ==========================================================
+  useEffect(() => {
+    const loadAdmission = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        // Fixed 401 Error: Using configured api service with JWT headers
+        const response = await api.get(`/admissions/${id}`);
+        const data = response.data.admission;
+
+        setAdmission(data);
+
+        // Populate Form Fields
+        setAdmissionDate(
+          data.admission_date
+            ? new Date(data.admission_date).toISOString().split("T")[0]
+            : ""
+        );
+        setAdmissionReason(data.admission_reason || "");
+        setDiagnosis(data.diagnosis || "");
+      } catch (err) {
+        console.error("Error fetching admission:", err);
+        setError(
+          err.response?.data?.error ||
+            err.response?.data?.message ||
+            "Failed to fetch admission details"
+        );
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // ==========================================================
-    // LOADING SCREEN
-    // ==========================================================
+    loadAdmission();
+  }, [id]);
 
-    if (loading) {
+  // ==========================================================
+  // UPDATE ADMISSION HANDLER
+  // ==========================================================
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-        return (
-
-            <div className="min-h-screen bg-gray-100">
-
-                <Navbar />
-
-                <div className="flex">
-
-                    <Sidebar />
-
-                    <div className="flex-1 p-8">
-
-                        <p className="text-gray-500">
-
-                            Loading admission...
-
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        );
-
+    if (!admissionDate) {
+      setError("Admission date is required");
+      return;
     }
 
-    // ==========================================================
-    // ERROR / NOT FOUND
-    // ==========================================================
+    try {
+      setSaving(true);
+      setError("");
 
-    if (!admission) {
+      await api.put(`/admissions/${id}`, {
+        admissionDate,
+        admissionReason,
+        diagnosis,
+      });
 
-        return (
-
-            <div className="min-h-screen bg-gray-100">
-
-                <Navbar />
-
-                <div className="flex">
-
-                    <Sidebar />
-
-                    <div className="flex-1 p-8">
-
-                        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
-
-                            {error || "Admission not found"}
-
-                        </div>
-
-                        <button
-
-                            onClick={() =>
-                                navigate("/admissions")
-                            }
-
-                            className="bg-gray-600 text-white px-5 py-2 rounded-lg"
-
-                        >
-
-                            Back to Admissions
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        );
-
+      alert("Admission updated successfully");
+      navigate(`/admissions/${id}`);
+    } catch (err) {
+      console.error("Error updating admission:", err);
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to update admission"
+      );
+    } finally {
+      setSaving(false);
     }
+  };
 
-    // ==========================================================
-    // MAIN UI
-    // ==========================================================
-
+  // ==========================================================
+  // LOADING SKELETON
+  // ==========================================================
+  if (loading) {
     return (
-
-        <div className="min-h-screen bg-gray-100">
-
-            {/* ==================================================
-                NAVBAR
-            ================================================== */}
-
-            <Navbar />
-
-            <div className="flex">
-
-                {/* ==================================================
-                    SIDEBAR
-                ================================================== */}
-
-                <Sidebar />
-
-                {/* ==================================================
-                    MAIN CONTENT
-                ================================================== */}
-
-                <div className="flex-1 p-8">
-
-                    {/* ==================================================
-                        HEADER
-                    ================================================== */}
-
-                    <div className="flex justify-between items-center mb-6">
-
-                        <div>
-
-                            <h1 className="text-3xl font-bold">
-
-                                Edit Admission
-
-                            </h1>
-
-                            <p className="text-gray-500">
-
-                                Update admission information
-
-                            </p>
-
-                        </div>
-
-                        <button
-
-                            onClick={() =>
-                                navigate(`/admissions/${id}`)
-                            }
-
-                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-
-                        >
-
-                            Cancel
-
-                        </button>
-
-                    </div>
-
-                    {/* ==================================================
-                        ERROR MESSAGE
-                    ================================================== */}
-
-                    {error && (
-
-                        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
-
-                            {error}
-
-                        </div>
-
-                    )}
-
-                    {/* ==================================================
-                        PATIENT INFORMATION
-                    ================================================== */}
-
-                    <div className="bg-white rounded-xl shadow p-6 mb-6">
-
-                        <h2 className="text-xl font-bold mb-5">
-
-                            Patient
-
-                        </h2>
-
-                        <p className="text-gray-500">
-
-                            Patient Name
-
-                        </p>
-
-                        <p className="text-lg font-semibold">
-
-                            {admission.patient_name}
-
-                        </p>
-
-                    </div>
-
-                    {/* ==================================================
-                        EDIT FORM
-                    ================================================== */}
-
-                    <form
-                        onSubmit={handleSubmit}
-                        className="bg-white rounded-xl shadow p-6"
-                    >
-
-                        <h2 className="text-xl font-bold mb-5">
-
-                            Admission Information
-
-                        </h2>
-
-                        {/* ==================================================
-                            ADMISSION DATE
-                        ================================================== */}
-
-                        <div className="mb-5">
-
-                            <label className="block font-semibold mb-2">
-
-                                Admission Date
-
-                            </label>
-
-                            <input
-
-                                type="date"
-
-                                value={admissionDate}
-
-                                onChange={(event) =>
-                                    setAdmissionDate(
-                                        event.target.value
-                                    )
-                                }
-
-                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-
-                            />
-
-                        </div>
-
-                        {/* ==================================================
-                            ADMISSION REASON
-                        ================================================== */}
-
-                        <div className="mb-5">
-
-                            <label className="block font-semibold mb-2">
-
-                                Admission Reason
-
-                            </label>
-
-                            <textarea
-
-                                value={admissionReason}
-
-                                onChange={(event) =>
-                                    setAdmissionReason(
-                                        event.target.value
-                                    )
-                                }
-
-                                placeholder="Enter admission reason"
-
-                                rows="4"
-
-                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-
-                            />
-
-                        </div>
-
-                        {/* ==================================================
-                            DIAGNOSIS
-                        ================================================== */}
-
-                        <div className="mb-6">
-
-                            <label className="block font-semibold mb-2">
-
-                                Diagnosis
-
-                            </label>
-
-                            <textarea
-
-                                value={diagnosis}
-
-                                onChange={(event) =>
-                                    setDiagnosis(
-                                        event.target.value
-                                    )
-                                }
-
-                                placeholder="Enter diagnosis"
-
-                                rows="4"
-
-                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-
-                            />
-
-                        </div>
-
-                        {/* ==================================================
-                            BUTTONS
-                        ================================================== */}
-
-                        <div className="flex gap-4">
-
-                            <button
-
-                                type="submit"
-
-                                disabled={saving}
-
-                                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-
-                            >
-
-                                {saving
-                                    ? "Saving..."
-                                    : "Save Changes"
-                                }
-
-                            </button>
-
-                            <button
-
-                                type="button"
-
-                                onClick={() =>
-                                    navigate(`/admissions/${id}`)
-                                }
-
-                                className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600"
-
-                            >
-
-                                Cancel
-
-                            </button>
-
-                        </div>
-
-                    </form>
-
-                </div>
-
+      <div className="min-h-screen bg-[#F6F8FC] font-sans antialiased text-slate-900">
+        <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+          <div className="h-9 w-36 bg-slate-200/80 rounded-xl animate-pulse" />
+          <div className="h-20 bg-slate-200/80 rounded-[22px] animate-pulse" />
+          <div className="h-96 bg-slate-200/80 rounded-[22px] animate-pulse" />
+        </main>
+      </div>
+    );
+  }
+
+  // ==========================================================
+  // ERROR / NOT FOUND SCREEN
+  // ==========================================================
+  if (!admission) {
+    return (
+      <div className="min-h-screen bg-[#F6F8FC] font-sans antialiased text-slate-900">
+        <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+          <div>
+            <Link
+              to="/admissions"
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-sm transition-all duration-150 hover:border-slate-300 hover:bg-slate-50"
+            >
+              <svg
+                className="h-4 w-4 text-slate-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              Back to Admissions
+            </Link>
+          </div>
+
+          <div className="rounded-[22px] border border-rose-200 bg-rose-50/80 p-8 text-center shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
+              <svg
+                className="h-6 w-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
             </div>
+            <h2 className="text-base font-bold text-slate-900">
+              {error || "Admission Record Not Found"}
+            </h2>
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                onClick={() => navigate("/admissions")}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#08679F] px-4 text-xs font-semibold text-white shadow-md shadow-[#08679F]/20 hover:bg-[#07557F]"
+              >
+                Back to Admissions
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
+  // ==========================================================
+  // MAIN FORM RENDER
+  // ==========================================================
+  return (
+    <div className="min-h-screen bg-[#F6F8FC] font-sans antialiased text-slate-900">
+      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        {/* =====================================================
+            BACK NAVIGATION
+        ====================================================== */}
+        <div>
+          <Link
+            to={`/admissions/${id}`}
+            className="
+              inline-flex h-9 items-center gap-2 rounded-xl
+              border border-slate-200 bg-white px-3.5
+              text-xs font-semibold text-slate-700
+              shadow-sm transition-all duration-150
+              hover:border-slate-300 hover:bg-slate-50
+              focus:outline-none focus:ring-4 focus:ring-slate-100
+            "
+          >
+            <svg
+              className="h-4 w-4 text-slate-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            Back to Details
+          </Link>
         </div>
 
-    );
+        {/* =====================================================
+            HEADER
+        ====================================================== */}
+        <div className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              Edit Admission Record
+            </h1>
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              Update stay details, dates, and diagnosis for Admission #{id}.
+            </p>
+          </div>
+        </div>
 
+        {/* =====================================================
+            ERROR MESSAGE ALERT
+        ====================================================== */}
+        {error && (
+          <div className="flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3.5 text-xs font-medium text-rose-700">
+            <svg
+              className="h-4 w-4 shrink-0 text-rose-500"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* =====================================================
+            PATIENT CONTEXT CARD
+        ====================================================== */}
+        <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-xs font-bold text-[#08679F]">
+              {admission.patient_name
+                ? admission.patient_name.charAt(0).toUpperCase()
+                : "P"}
+            </div>
+            <div>
+              <span className="text-[11px] font-semibold text-slate-400">
+                Patient Name
+              </span>
+              <p className="text-xs font-bold text-slate-900">
+                {admission.patient_name || "—"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* =====================================================
+            EDIT FORM CARD
+        ====================================================== */}
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] space-y-5"
+        >
+          <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">
+            Admission Details
+          </h2>
+
+          {/* ADMISSION DATE */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+              Admission Date <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={admissionDate}
+              onChange={(e) => setAdmissionDate(e.target.value)}
+              className="
+                w-full rounded-xl border border-slate-200 bg-white
+                px-3.5 py-2.5 text-xs font-medium text-slate-900
+                shadow-sm transition-all duration-150
+                focus:border-[#08679F] focus:outline-none focus:ring-4 focus:ring-[#08679F]/10
+              "
+            />
+          </div>
+
+          {/* ADMISSION REASON */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+              Admission Reason
+            </label>
+            <textarea
+              value={admissionReason}
+              onChange={(e) => setAdmissionReason(e.target.value)}
+              placeholder="Primary reason for patient admission..."
+              rows={3}
+              className="
+                w-full rounded-xl border border-slate-200 bg-white
+                p-3 text-xs font-medium text-slate-900 placeholder:text-slate-400
+                shadow-sm transition-all duration-150
+                focus:border-[#08679F] focus:outline-none focus:ring-4 focus:ring-[#08679F]/10
+              "
+            />
+          </div>
+
+          {/* DIAGNOSIS */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+              Diagnosis
+            </label>
+            <textarea
+              value={diagnosis}
+              onChange={(e) => setDiagnosis(e.target.value)}
+              placeholder="Clinical diagnosis notes..."
+              rows={3}
+              className="
+                w-full rounded-xl border border-slate-200 bg-white
+                p-3 text-xs font-medium text-slate-900 placeholder:text-slate-400
+                shadow-sm transition-all duration-150
+                focus:border-[#08679F] focus:outline-none focus:ring-4 focus:ring-[#08679F]/10
+              "
+            />
+          </div>
+
+          {/* FORM ACTIONS */}
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => navigate(`/admissions/${id}`)}
+              className="
+                inline-flex h-10 items-center justify-center rounded-xl
+                border border-slate-300 bg-white px-4 text-xs font-semibold
+                text-slate-700 shadow-sm transition-all duration-150
+                hover:border-slate-400 hover:bg-slate-50
+                focus:outline-none focus:ring-4 focus:ring-slate-100
+              "
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="
+                inline-flex h-10 items-center justify-center rounded-xl
+                bg-[#08679F] px-5 text-xs font-semibold text-white
+                shadow-md shadow-[#08679F]/20 transition-all duration-150
+                hover:bg-[#07557F] active:scale-[0.99]
+                disabled:cursor-not-allowed disabled:opacity-50
+                focus:outline-none focus:ring-4 focus:ring-[#08679F]/20
+              "
+            >
+              {saving ? "Saving Changes..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </main>
+    </div>
+  );
 }
-
-// ==========================================================
-// EXPORT
-// ==========================================================
 
 export default EditAdmission;

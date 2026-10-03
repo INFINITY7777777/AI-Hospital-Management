@@ -1,664 +1,279 @@
-// ==========================================================
-// REACT HOOKS
-// ==========================================================
-
 import { useEffect, useState } from "react";
-
-
-// ==========================================================
-// AXIOS
-// ==========================================================
-
-import axios from "axios";
-
-
-// ==========================================================
-// REACT ROUTER
-// ==========================================================
-
-import {
-    useNavigate,
-    useParams
-} from "react-router-dom";
-
-
-// ==========================================================
-// NAVBAR
-// ==========================================================
-
-import Navbar from "../components/Navbar";
-
-
-// ==========================================================
-// SIDEBAR
-// ==========================================================
-
-import Sidebar from "../components/Sidebar";
-
-
-// ==========================================================
-// EDIT BED COMPONENT
-// ==========================================================
+import { useNavigate, useParams, Link } from "react-router-dom";
+import api from "../services/api";
 
 function EditBed() {
-
-
-    // ==========================================================
-    // GET BED ID FROM URL
-    // Example:
-    // /beds/edit/2
-    // id = 2
-    // ==========================================================
-
-    const { id } = useParams();
-
-
-    // ==========================================================
-    // NAVIGATION
-    // ==========================================================
-
-    const navigate = useNavigate();
-
-
-    // ==========================================================
-    // BED DATA
-    // ==========================================================
-
-    const [bedData, setBedData] = useState({
-
-        bedNumber: "",
-
-        ward: "",
-
-        bedType: "",
-
-        status: ""
-
-    });
-
-
-    // ==========================================================
-    // LOADING STATE
-    // ==========================================================
-
-    const [loading, setLoading] = useState(true);
-
-
-    // ==========================================================
-    // UPDATE LOADING STATE
-    // ==========================================================
-
-    const [updating, setUpdating] = useState(false);
-
-
-    // ==========================================================
-    // ERROR STATE
-    // ==========================================================
-
-    const [error, setError] = useState("");
-
-
-    // ==========================================================
-    // FETCH BED DETAILS
-    // ==========================================================
-
-    useEffect(() => {
-
-
-        const fetchBed = async () => {
-
-            try {
-
-                const response = await axios.get(
-
-                    `http://localhost:5000/api/beds/${id}`
-
-                );
-
-
-                const bed = response.data.bed;
-
-
-                // ==========================================================
-                // STORE BED DATA IN FORM
-                // ==========================================================
-
-                setBedData({
-
-                    bedNumber:
-                        bed.bed_number || "",
-
-                    ward:
-                        bed.ward || "",
-
-                    bedType:
-                        bed.bed_type || "",
-
-                    status:
-                        bed.status || ""
-
-                });
-
-            }
-
-
-            catch (error) {
-
-                console.error(
-
-                    "Error fetching bed:",
-
-                    error
-
-                );
-
-
-                setError(
-
-                    error.response?.data?.error ||
-
-                    "Failed to fetch bed"
-
-                );
-
-            }
-
-
-            finally {
-
-                setLoading(false);
-
-            }
-
-        };
-
-
-        fetchBed();
-
-
-    }, [id]);
-
-
-    // ==========================================================
-    // HANDLE INPUT CHANGE
-    // ==========================================================
-
-    const handleChange = (event) => {
-
-        const {
-
-            name,
-
-            value
-
-        } = event.target;
-
-
-        setBedData((previousData) => ({
-
-            ...previousData,
-
-            [name]: value
-
-        }));
-
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [bedData, setBedData] = useState({
+    bedNumber: "",
+    ward: "",
+    bedType: "",
+    status: "",
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState("");
+
+  // ==========================================================
+  // FETCH BED DETAILS
+  // ==========================================================
+  useEffect(() => {
+    const fetchBed = async () => {
+      try {
+        const response = await api.get(`/beds/${id}`);
+        const bed = response.data.bed;
+
+        setBedData({
+          bedNumber: bed.bed_number || "",
+          ward: bed.ward || "",
+          bedType: bed.bed_type || "",
+          status: bed.status || "",
+        });
+      } catch (error) {
+        console.error("Error fetching bed:", error);
+        setError(error.response?.data?.error || "Failed to fetch bed");
+      } finally {
+        setLoading(false);
+      }
     };
 
+    fetchBed();
+  }, [id]);
 
-    // ==========================================================
-    // HANDLE FORM SUBMIT
-    // ==========================================================
+  // ==========================================================
+  // HANDLE INPUT CHANGE
+  // ==========================================================
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setBedData((previousData) => ({
+      ...previousData,
+      [name]: value,
+    }));
+  };
 
-    const handleSubmit = async (event) => {
+  // ==========================================================
+  // HANDLE FORM SUBMIT
+  // ==========================================================
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-        event.preventDefault();
+    try {
+      setUpdating(true);
+      setError("");
 
+      await api.put(`/beds/${id}`, {
+        bedNumber: bedData.bedNumber,
+        ward: bedData.ward,
+        bedType: bedData.bedType,
+        status: bedData.status,
+      });
 
-        try {
-
-            setUpdating(true);
-
-            setError("");
-
-
-            // ==========================================================
-            // UPDATE BED
-            // ==========================================================
-
-            await axios.put(
-
-                `http://localhost:5000/api/beds/${id}`,
-
-                {
-
-                    bedNumber:
-                        bedData.bedNumber,
-
-                    ward:
-                        bedData.ward,
-
-                    bedType:
-                        bedData.bedType,
-
-                    status:
-                        bedData.status
-
-                }
-
-            );
-
-
-            // ==========================================================
-            // SUCCESS MESSAGE
-            // ==========================================================
-
-            alert(
-
-                "Bed updated successfully"
-
-            );
-
-
-            // ==========================================================
-            // RETURN TO BED LIST
-            // ==========================================================
-
-            navigate("/beds");
-
-        }
-
-
-        catch (error) {
-
-            console.error(
-
-                "Error updating bed:",
-
-                error
-
-            );
-
-
-            setError(
-
-                error.response?.data?.error ||
-
-                "Failed to update bed"
-
-            );
-
-        }
-
-
-        finally {
-
-            setUpdating(false);
-
-        }
-
-    };
-
-
-    // ==========================================================
-    // LOADING SCREEN
-    // ==========================================================
-
-    if (loading) {
-
-        return (
-
-            <div className="min-h-screen bg-gray-100">
-
-                <Navbar />
-
-                <div className="flex">
-
-                    <Sidebar />
-
-                    <div className="flex-1 p-8">
-
-                        <p className="text-gray-500">
-
-                            Loading bed...
-
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        );
-
+      alert("Bed updated successfully");
+      navigate("/beds");
+    } catch (error) {
+      console.error("Error updating bed:", error);
+      setError(error.response?.data?.error || "Failed to update bed");
+    } finally {
+      setUpdating(false);
     }
+  };
 
-
-    // ==========================================================
-    // MAIN UI
-    // ==========================================================
-
+  // ==========================================================
+  // LOADING SCREEN
+  // ==========================================================
+  if (loading) {
     return (
-
-        <div className="min-h-screen bg-gray-100">
-
-
-            {/* ==========================================================
-                NAVBAR
-            ========================================================== */}
-
-            <Navbar />
-
-
-            <div className="flex">
-
-
-                {/* ==========================================================
-                    SIDEBAR
-                ========================================================== */}
-
-                <Sidebar />
-
-
-                {/* ==========================================================
-                    MAIN CONTENT
-                ========================================================== */}
-
-                <div className="flex-1 p-8">
-
-
-                    <div className="max-w-2xl mx-auto">
-
-
-                        {/* ==========================================================
-                            PAGE TITLE
-                        ========================================================== */}
-
-                        <h1 className="text-3xl font-bold mb-6">
-
-                            Edit Bed
-
-                        </h1>
-
-
-                        {/* ==========================================================
-                            ERROR MESSAGE
-                        ========================================================== */}
-
-                        {error && (
-
-                            <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
-
-                                {error}
-
-                            </div>
-
-                        )}
-
-
-                        {/* ==========================================================
-                            FORM
-                        ========================================================== */}
-
-                        <form
-
-                            onSubmit={handleSubmit}
-
-                            className="bg-white rounded-xl shadow p-6 space-y-6"
-
-                        >
-
-
-                            {/* ==========================================================
-                                BED NUMBER
-                            ========================================================== */}
-
-                            <div>
-
-                                <label className="block font-medium mb-2">
-
-                                    Bed Number
-
-                                </label>
-
-
-                                <input
-
-                                    type="text"
-
-                                    name="bedNumber"
-
-                                    value={bedData.bedNumber}
-
-                                    onChange={handleChange}
-
-                                    required
-
-                                    className="w-full border rounded-lg p-3"
-
-                                />
-
-                            </div>
-
-
-                            {/* ==========================================================
-                                WARD
-                            ========================================================== */}
-
-                            <div>
-
-                                <label className="block font-medium mb-2">
-
-                                    Ward
-
-                                </label>
-
-
-                                <input
-
-                                    type="text"
-
-                                    name="ward"
-
-                                    value={bedData.ward}
-
-                                    onChange={handleChange}
-
-                                    required
-
-                                    className="w-full border rounded-lg p-3"
-
-                                />
-
-                            </div>
-
-
-                            {/* ==========================================================
-                                BED TYPE
-                            ========================================================== */}
-
-                            <div>
-
-                                <label className="block font-medium mb-2">
-
-                                    Bed Type
-
-                                </label>
-
-
-                                <select
-
-                                    name="bedType"
-
-                                    value={bedData.bedType}
-
-                                    onChange={handleChange}
-
-                                    required
-
-                                    className="w-full border rounded-lg p-3"
-
-                                >
-
-                                    <option value="">
-
-                                        Select Bed Type
-
-                                    </option>
-
-
-                                    <option value="General">
-
-                                        General
-
-                                    </option>
-
-
-                                    <option value="ICU">
-
-                                        ICU
-
-                                    </option>
-
-
-                                    <option value="Private">
-
-                                        Private
-
-                                    </option>
-
-
-                                    <option value="Emergency">
-
-                                        Emergency
-
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            {/* ==========================================================
-                                STATUS
-                            ========================================================== */}
-
-                            <div>
-
-                                <label className="block font-medium mb-2">
-                                    Status
-                                </label>
-
-                                <select
-                                    name="status"
-                                    value={bedData.status}
-                                    onChange={handleChange}
-                                    className="w-full border rounded-lg p-3"
-                                    disabled={bedData.status === "Occupied"}
-                                >
-
-                                    <option value="Available">
-                                        Available
-                                    </option>
-
-                                    <option value="Maintenance">
-                                        Maintenance
-                                    </option>
-
-                                    {bedData.status === "Occupied" && (
-                                        <option value="Occupied">
-                                            Occupied
-                                        </option>
-                                    )}
-
-                                </select>
-
-                                {bedData.status === "Occupied" && (
-                                    <p className="text-sm text-gray-500 mt-2">
-                                        Occupied beds cannot be changed manually.
-                                        Use "Release Bed" to make this bed available.
-                                    </p>
-                                )}
-
-                            </div>
-
-
-                            {/* ==========================================================
-                                BUTTONS
-                            ========================================================== */}
-
-                            <div className="flex gap-4">
-
-
-                                {/* ==========================================================
-                                    UPDATE BUTTON
-                                ========================================================== */}
-
-                                <button
-
-                                    type="submit"
-
-                                    disabled={updating}
-
-                                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-
-                                >
-
-                                    {updating
-
-                                        ? "Updating..."
-
-                                        : "Update Bed"
-
-                                    }
-
-                                </button>
-
-
-                                {/* ==========================================================
-                                    CANCEL BUTTON
-                                ========================================================== */}
-
-                                <button
-
-                                    type="button"
-
-                                    onClick={() =>
-
-                                        navigate("/beds")
-
-                                    }
-
-                                    className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600"
-
-                                >
-
-                                    Cancel
-
-                                </button>
-
-
-                            </div>
-
-
-                        </form>
-
-
-                    </div>
-
-                </div>
-
-            </div>
-
+      <div className="min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="h-9 w-36 bg-slate-200/80 rounded-xl animate-pulse" />
+          <div className="border-b border-slate-200/80 pb-5">
+            <div className="h-8 w-48 bg-slate-200/80 rounded-lg animate-pulse" />
+          </div>
+          <div className="rounded-[22px] border border-slate-200/80 bg-white p-6 h-96 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================================
+  // MAIN UI
+  // ==========================================================
+  return (
+    <div className="min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Top Bar: Back to Beds Button */}
+        <div className="flex items-center justify-between">
+          <Link
+            to="/beds"
+            className="
+              inline-flex items-center gap-2 h-9 px-3.5 rounded-xl
+              bg-white border border-slate-200 text-[#08679F] hover:bg-slate-50 hover:border-slate-300
+              text-xs font-semibold shadow-xs transition-all duration-150
+              active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-slate-200
+            "
+          >
+            <svg
+              className="h-3.5 w-3.5 text-[#08679F]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 19.5L8.25 12l7.5-7.5"
+              />
+            </svg>
+            Back to Beds
+          </Link>
         </div>
 
-    );
+        {/* Page Header */}
+        <div className="border-b border-slate-200/80 pb-5">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            Edit Bed
+          </h1>
+          <p className="mt-1 text-xs text-slate-500 font-medium">
+            Update bed details, ward assignment, or maintenance status.
+          </p>
+        </div>
 
+        {/* ERROR ALERT */}
+        {error && (
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3.5 text-xs font-medium text-rose-700">
+            <div className="flex items-center gap-2.5">
+              <svg
+                className="h-4 w-4 shrink-0 text-rose-500"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* FORM CONTAINER */}
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] space-y-5"
+        >
+          {/* BED NUMBER */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Bed Number
+            </label>
+            <input
+              type="text"
+              name="bedNumber"
+              value={bedData.bedNumber}
+              onChange={handleChange}
+              required
+              className="w-full h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-900 transition-all duration-150 shadow-xs focus:border-[#08679F] focus:outline-none focus:ring-4 focus:ring-[#08679F]/10 placeholder:text-slate-400"
+            />
+          </div>
+
+          {/* WARD */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Ward
+            </label>
+            <input
+              type="text"
+              name="ward"
+              value={bedData.ward}
+              onChange={handleChange}
+              required
+              className="w-full h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-900 transition-all duration-150 shadow-xs focus:border-[#08679F] focus:outline-none focus:ring-4 focus:ring-[#08679F]/10 placeholder:text-slate-400"
+            />
+          </div>
+
+          {/* BED TYPE */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Bed Type
+            </label>
+            <select
+              name="bedType"
+              value={bedData.bedType}
+              onChange={handleChange}
+              required
+              className="w-full h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-900 transition-all duration-150 shadow-xs focus:border-[#08679F] focus:outline-none focus:ring-4 focus:ring-[#08679F]/10"
+            >
+              <option value="">Select Bed Type</option>
+              <option value="General">General</option>
+              <option value="ICU">ICU</option>
+              <option value="Private">Private</option>
+              <option value="Emergency">Emergency</option>
+            </select>
+          </div>
+
+          {/* STATUS */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Status
+            </label>
+            <select
+              name="status"
+              value={bedData.status}
+              onChange={handleChange}
+              disabled={bedData.status === "Occupied"}
+              className="w-full h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-900 transition-all duration-150 shadow-xs focus:border-[#08679F] focus:outline-none focus:ring-4 focus:ring-[#08679F]/10 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+            >
+              <option value="Available">Available</option>
+              <option value="Maintenance">Maintenance</option>
+              {bedData.status === "Occupied" && (
+                <option value="Occupied">Occupied</option>
+              )}
+            </select>
+            {bedData.status === "Occupied" && (
+              <p className="text-[11px] text-amber-600 font-medium mt-1.5 flex items-center gap-1">
+                <span>⚠️</span> Occupied beds cannot be status-edited directly. Use "Release Bed" from Bed Management.
+              </p>
+            )}
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
+            <button
+              type="submit"
+              disabled={updating}
+              className="
+                inline-flex items-center justify-center h-10 px-5 rounded-xl
+                bg-[#08679F] hover:bg-[#07557F] text-white text-xs font-semibold
+                shadow-md shadow-[#08679F]/20 transition-all duration-150
+                hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]
+                focus:outline-none focus:ring-4 focus:ring-[#08679F]/20 disabled:opacity-50
+              "
+            >
+              {updating ? "Updating..." : "Update Bed"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/beds")}
+              className="
+                inline-flex items-center justify-center h-10 px-5 rounded-xl
+                bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-xs font-semibold
+                transition-all duration-150 active:scale-[0.99]
+              "
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
-
-
-// ==========================================================
-// EXPORT
-// ==========================================================
 
 export default EditBed;
