@@ -1,17 +1,12 @@
 // ==========================================================
-// REACT
+// REACT & ROUTER
 // ==========================================================
 
 import { useEffect, useState } from "react";
-
-// ==========================================================
-// REACT ROUTER
-// ==========================================================
-
 import { useNavigate, useParams } from "react-router-dom";
 
 // ==========================================================
-// API
+// API SERVICE
 // ==========================================================
 
 import api from "../services/api";
@@ -39,32 +34,53 @@ function EditPatient() {
     admissionDate: "",
   });
 
+  // Dynamic Options State
+  const [doctorsList, setDoctorsList] = useState([]);
+  const [bedsList, setBedsList] = useState([]);
+  const [availableWards, setAvailableWards] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   // ======================================================
-  // FETCH PATIENT
+  // FETCH PATIENT, DOCTORS, AND BEDS
   // ======================================================
 
   useEffect(() => {
-    const fetchPatient = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         setErrorMessage("");
 
         const token = localStorage.getItem("token");
-
         if (!token) {
           navigate("/");
           return;
         }
 
-        const response = await api.get(`/patients/${id}`);
-        const patient = response.data.patient;
+        // Fetch patient, doctors, and beds concurrently
+        const [patientRes, doctorsRes, bedsRes] = await Promise.all([
+          api.get(`/patients/${id}`),
+          api.get("/doctors"),
+          api.get("/beds"),
+        ]);
 
-        // Safely extract YYYY-MM-DD date without timezone shift
+        const patient = patientRes.data.patient;
+        const doctors = doctorsRes.data.doctors || [];
+        const beds = bedsRes.data.beds || [];
+
+        setDoctorsList(doctors);
+        setBedsList(beds);
+
+        // Extract distinct wards from beds list
+        const distinctWards = Array.from(
+          new Set(beds.map((bed) => bed.ward).filter(Boolean))
+        ).sort();
+
+        setAvailableWards(distinctWards);
+
         let formattedAdmissionDate = "";
         if (patient.admission_date) {
           formattedAdmissionDate = String(patient.admission_date).split("T")[0];
@@ -85,52 +101,61 @@ function EditPatient() {
           admissionDate: formattedAdmissionDate,
         });
       } catch (error) {
-        console.error("Error fetching patient:", error);
-
+        console.error("Error loading edit page data:", error);
         if (error.response?.status === 401) {
           localStorage.removeItem("token");
           navigate("/");
           return;
         }
-
-        if (error.response?.status === 403) {
-          setErrorMessage("You do not have permission to edit this patient.");
-          return;
-        }
-
-        if (error.response?.status === 404) {
-          setErrorMessage("Patient not found.");
-          return;
-        }
-
-        setErrorMessage(
-          error.response?.data?.error || "Failed to load patient details."
-        );
+        setErrorMessage("Failed to load patient or system records.");
       } finally {
         setLoading(false);
       }
     };
 
     if (id) {
-      fetchPatient();
+      fetchData();
     }
   }, [id, navigate]);
 
   // ======================================================
-  // HANDLE INPUT
+  // DERIVED STATE: FILTERED BEDS FOR SELECTED WARD
+  // ======================================================
+
+  const filteredBeds = patientData.ward
+    ? bedsList.filter((bed) => {
+        const isSameWard = bed.ward === patientData.ward;
+        const isAvailable = String(bed.status).toLowerCase() === "available";
+        const isCurrentBed = bed.bed_number === patientData.bedNumber;
+
+        return isSameWard && (isAvailable || isCurrentBed);
+      })
+    : [];
+
+  // ======================================================
+  // HANDLE INPUT CHANGE
   // ======================================================
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
 
-    setPatientData((previousData) => ({
-      ...previousData,
-      [name]: value,
-    }));
+    if (name === "ward") {
+      // Clear bed selection when changing ward
+      setPatientData((previous) => ({
+        ...previous,
+        ward: value,
+        bedNumber: "",
+      }));
+    } else {
+      setPatientData((previous) => ({
+        ...previous,
+        [name]: value,
+      }));
+    }
   };
 
   // ======================================================
-  // UPDATE PATIENT
+  // SUBMIT UPDATE
   // ======================================================
 
   const handleUpdatePatient = async (event) => {
@@ -143,28 +168,22 @@ function EditPatient() {
     try {
       const payload = {
         patient_name: patientData.patientName,
-        patientName: patientData.patientName,
         age: Number(patientData.age),
         gender: patientData.gender,
         blood_group: patientData.bloodGroup,
-        bloodGroup: patientData.bloodGroup,
         phone: patientData.phone,
         address: patientData.address,
         emergency_contact: patientData.emergencyContact,
-        emergencyContact: patientData.emergencyContact,
-        doctor: patientData.doctor,
-        ward: patientData.ward,
-        bed_number: patientData.bedNumber,
-        bedNumber: patientData.bedNumber,
+        doctor: patientData.doctor || null,
+        ward: patientData.ward || null,
+        bed_number: patientData.bedNumber || null,
         diagnosis: patientData.diagnosis,
         admission_date: patientData.admissionDate || null,
-        admissionDate: patientData.admissionDate || null,
       };
 
-      const response = await api.put(`/patients/${id}`, payload);
+      await api.put(`/patients/${id}`, payload);
 
-      console.log("Patient updated successfully:", response.data);
-      setMessage("Patient updated successfully.");
+      setMessage("Patient record updated and synchronized successfully.");
 
       setTimeout(() => {
         navigate(`/patients/${id}`);
@@ -190,7 +209,6 @@ function EditPatient() {
             <div className="space-y-2">
               <div className="h-3 w-32 animate-pulse rounded bg-slate-200/80" />
               <div className="h-8 w-64 animate-pulse rounded-lg bg-slate-200/80" />
-              <div className="h-4 w-80 animate-pulse rounded bg-slate-200/80" />
             </div>
           </div>
         </main>
@@ -206,62 +224,42 @@ function EditPatient() {
             type="button"
             onClick={() => navigate(`/patients/${id}`)}
             disabled={updating}
-            className="
-              inline-flex h-9 items-center gap-2 rounded-xl
-              border border-slate-200 bg-white px-3.5
-              text-xs font-semibold text-slate-700
-              shadow-sm transition-all duration-150
-              hover:border-slate-300 hover:bg-slate-50
-              disabled:cursor-not-allowed disabled:opacity-50
-              focus:outline-none focus:ring-4 focus:ring-slate-100
-            "
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
           >
-            <svg
-              className="h-4 w-4 text-slate-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
+            <svg className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back to Patient Details
           </button>
         </div>
 
-        <div className="flex flex-col gap-4 border-b border-slate-200/80 pb-5">
-          <div>
-            <span className="block text-[11px] font-bold uppercase tracking-wider text-[#08679F]">
-              Record Management
-            </span>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Edit Patient Record
-            </h1>
-            <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
-              Update demographics, clinical assignment, and contact information.
-            </p>
-          </div>
+        <div className="border-b border-slate-200/80 pb-5">
+          <span className="block text-[11px] font-bold uppercase tracking-wider text-[#08679F]">
+            Record Management
+          </span>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Edit Patient Record
+          </h1>
+          <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
+            Update demographics and manage dynamic hospital/ward bed assignment.
+          </p>
         </div>
 
         {errorMessage && (
-          <div className="flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3.5 text-xs font-medium text-rose-700">
-            <span>{errorMessage}</span>
+          <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3.5 text-xs font-medium text-rose-700">
+            {errorMessage}
           </div>
         )}
 
         {message && (
-          <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3.5 text-xs font-medium text-emerald-700">
-            <span>{message}</span>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3.5 text-xs font-medium text-emerald-700">
+            {message}
           </div>
         )}
 
         <form onSubmit={handleUpdatePatient} className="space-y-6">
-          {/* SECTION 1: PERSONAL DETAILS */}
-          <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_8px_30px_rgba(15,23,42,0.04)] sm:p-6">
+          {/* SECTION 1: DEMOGRAPHICS */}
+          <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-5 border-b border-slate-100 pb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 1. Personal Demographics
@@ -342,7 +340,7 @@ function EditPatient() {
           </div>
 
           {/* SECTION 2: CONTACT DETAILS */}
-          <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_8px_30px_rgba(15,23,42,0.04)] sm:p-6">
+          <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-5 border-b border-slate-100 pb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 2. Contact Details
@@ -393,8 +391,8 @@ function EditPatient() {
             </div>
           </div>
 
-          {/* SECTION 3: HOSPITAL & WARD ASSIGNMENT */}
-          <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_8px_30px_rgba(15,23,42,0.04)] sm:p-6">
+          {/* SECTION 3: SYNCHRONIZED HOSPITAL & WARD ASSIGNMENT */}
+          <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-5 border-b border-slate-100 pb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 3. Hospital & Ward Assignment
@@ -402,45 +400,74 @@ function EditPatient() {
             </div>
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+              {/* ATTENDING DOCTOR DROPDOWN */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate-700">
                   Attending Doctor
                 </label>
-                <input
-                  type="text"
+                <select
                   name="doctor"
                   value={patientData.doctor}
                   onChange={handleInputChange}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-xs text-slate-800 sm:text-sm outline-none focus:border-[#08679F]"
-                />
+                >
+                  <option value="">Unassigned / Select Doctor</option>
+                  {doctorsList.map((doc) => (
+                    <option key={doc.id} value={doc.doctor_name}>
+                      Dr. {doc.doctor_name} ({doc.specialization || "General"})
+                    </option>
+                  ))}
+                </select>
               </div>
 
+              {/* WARD UNIT DROPDOWN */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate-700">
                   Ward Unit
                 </label>
-                <input
-                  type="text"
+                <select
                   name="ward"
                   value={patientData.ward}
                   onChange={handleInputChange}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-xs text-slate-800 sm:text-sm outline-none focus:border-[#08679F]"
-                />
+                >
+                  <option value="">Unassigned / Select Ward</option>
+                  {availableWards.map((wrd) => (
+                    <option key={wrd} value={wrd}>
+                      {wrd}
+                    </option>
+                  ))}
+                </select>
               </div>
 
+              {/* BED NUMBER DEPENDENT DROPDOWN */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate-700">
                   Bed Number
                 </label>
-                <input
-                  type="text"
+                <select
                   name="bedNumber"
                   value={patientData.bedNumber}
                   onChange={handleInputChange}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-xs text-slate-800 sm:text-sm outline-none focus:border-[#08679F]"
-                />
+                  disabled={!patientData.ward}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-xs text-slate-800 sm:text-sm outline-none focus:border-[#08679F] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">
+                    {!patientData.ward
+                      ? "Select Ward First"
+                      : filteredBeds.length === 0
+                      ? "No Available Beds in Ward"
+                      : "Unassigned / Select Bed"}
+                  </option>
+                  {filteredBeds.map((bd) => (
+                    <option key={bd.id} value={bd.bed_number}>
+                      Bed {bd.bed_number} ({bd.bed_type || "Standard"})
+                    </option>
+                  ))}
+                </select>
               </div>
 
+              {/* ADMISSION DATE */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate-700">
                   Admission Date <span className="text-slate-400 font-normal">(Optional)</span>
@@ -454,6 +481,7 @@ function EditPatient() {
                 />
               </div>
 
+              {/* DIAGNOSIS */}
               <div className="md:col-span-2 lg:col-span-4">
                 <label className="mb-1.5 block text-xs font-bold text-slate-700">
                   Diagnosis / Primary Condition

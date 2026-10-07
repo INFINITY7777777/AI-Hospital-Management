@@ -1,17 +1,32 @@
 const express = require("express");
-
 const router = express.Router();
 
-// Import both functions from authController
+// Import authentication & authorization middleware
+const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware");
+
+// Import auth controller functions
 const {
-    registerUser,
-    loginUser
+  registerUser,
+  loginUser,
+  updatePassword,
+  updateMpin,
+  adminResetUserPassword,
 } = require("../controllers/authController");
 
-// Registration Route
+// Public authentication routes
 router.post("/register", registerUser);
-
-// Login Route
 router.post("/login", loginUser);
+
+// User self-service security routes
+router.put("/password", verifyToken, updatePassword);
+router.put("/mpin", verifyToken, updateMpin);
+
+// Admin recovery routes
+router.put(
+  "/admin/reset-password",
+  verifyToken,
+  authorizeRoles("admin"),
+  adminResetUserPassword
+);
 
 module.exports = router;

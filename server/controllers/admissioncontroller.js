@@ -835,6 +835,7 @@ const deleteAdmission = async (req, res) => {
     await client.query("BEGIN");
     transactionStarted = true;
 
+    // 1. Lock and inspect admission
     const admissionResult = await client.query(
       `SELECT id, status
        FROM admissions
@@ -852,6 +853,7 @@ const deleteAdmission = async (req, res) => {
       });
     }
 
+    // 2. Ensure only discharged admissions can be deleted
     if (admissionResult.rows[0].status !== "Discharged") {
       await client.query("ROLLBACK");
       transactionStarted = false;
@@ -862,24 +864,14 @@ const deleteAdmission = async (req, res) => {
       });
     }
 
-    const historyResult = await client.query(
-      `SELECT id
-       FROM patient_stay_history
-       WHERE admission_id = $1
-       LIMIT 1`,
+    // 3. Delete dependent child records from patient_stay_history first
+    await client.query(
+      `DELETE FROM patient_stay_history
+       WHERE admission_id = $1`,
       [Number(id)]
     );
 
-    if (historyResult.rows.length > 0) {
-      await client.query("ROLLBACK");
-      transactionStarted = false;
-
-      return res.status(409).json({
-        error:
-          "This admission has stay-history records and cannot be deleted. Preserve the history instead.",
-      });
-    }
-
+    // 4. Delete admission record
     const result = await client.query(
       `DELETE FROM admissions
        WHERE id = $1
@@ -898,7 +890,7 @@ const deleteAdmission = async (req, res) => {
     transactionStarted = false;
 
     return res.status(200).json({
-      message: "Admission deleted successfully",
+      message: "Admission record and stay history deleted successfully",
       admission: result.rows[0],
     });
   } catch (error) {
@@ -914,7 +906,6 @@ const deleteAdmission = async (req, res) => {
     if (client) client.release();
   }
 };
-
 // ==========================================================
 // EXPORTS
 // ==========================================================

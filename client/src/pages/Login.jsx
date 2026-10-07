@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import MedicalPlusBackground from "../components/MedicalPlusBackground";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -11,6 +12,50 @@ function Login() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const navigate = useNavigate();
+
+  // Left Card 3D Tilt & Spotlight state
+  const leftCardRef = useRef(null);
+  const [leftMousePos, setLeftMousePos] = useState({ x: 0, y: 0 });
+  const [leftCardRotate, setLeftCardRotate] = useState({ x: 0, y: 0 });
+  const [isLeftHovered, setIsLeftHovered] = useState(false);
+
+  const handleMouseMoveLeftCard = (e) => {
+    if (!leftCardRef.current) return;
+    const rect = leftCardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setLeftMousePos({ x, y });
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -6;
+    const rotateY = ((x - centerX) / centerX) * 6;
+
+    setLeftCardRotate({ x: rotateX, y: rotateY });
+  };
+
+  // Right Card 3D Tilt & Spotlight state
+  const rightCardRef = useRef(null);
+  const [rightMousePos, setRightMousePos] = useState({ x: 0, y: 0 });
+  const [rightCardRotate, setRightCardRotate] = useState({ x: 0, y: 0 });
+  const [isRightHovered, setIsRightHovered] = useState(false);
+
+  const handleMouseMoveRightCard = (e) => {
+    if (!rightCardRef.current) return;
+    const rect = rightCardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setRightMousePos({ x, y });
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -5;
+    const rotateY = ((x - centerX) / centerX) * 5;
+
+    setRightCardRotate({ x: rotateX, y: rotateY });
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -57,25 +102,65 @@ function Login() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#F6F8FC] font-sans text-slate-900">
+      {/* Interactive Medical + Canvas Hover Effect */}
+      <MedicalPlusBackground />
+
       {/* Background decoration */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
         <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#08679F]/10 blur-3xl" />
         <div className="absolute -right-32 top-1/4 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
-        <div className="absolute inset-0 bg-linear-to-br from-white via-[#F6F8FC]/80 to-[#F8FAFC]/90" />
+        <div className="absolute inset-0 bg-linear-to-br from-white/70 via-[#F6F8FC]/60 to-[#F8FAFC]/80" />
       </div>
 
       {/* Main content */}
       <main className="relative z-10 flex min-h-screen items-center justify-center px-5 py-10 lg:px-10">
         <div className="w-full max-w-6xl">
           <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-            {/* Login card */}
-            <section className="mx-auto w-full max-w-md lg:mx-0">
+            {/* Left Login card container with 3D perspective */}
+            <section className="mx-auto w-full max-w-md lg:mx-0 perspective-[1000px]">
               <div
-                className="animate-login-card rounded-[22px] border border-slate-200/80 bg-white/80 p-7 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl sm:p-9"
+                ref={leftCardRef}
+                onMouseMove={handleMouseMoveLeftCard}
+                onMouseEnter={() => setIsLeftHovered(true)}
+                onMouseLeave={() => {
+                  setIsLeftHovered(false);
+                  setLeftCardRotate({ x: 0, y: 0 });
+                }}
+                style={{
+                  transform: isLeftHovered
+                    ? `rotateX(${leftCardRotate.x}deg) rotateY(${leftCardRotate.y}deg) translateZ(10px)`
+                    : "rotateX(0deg) rotateY(0deg) translateZ(0px)",
+                  transition: isLeftHovered
+                    ? "transform 0.1s ease-out, box-shadow 0.3s ease-out"
+                    : "transform 0.5s ease-out, box-shadow 0.5s ease-out",
+                }}
+                className="animate-login-card relative overflow-hidden rounded-[22px] border border-slate-200/80 bg-white/80 p-7 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:p-9 hover:border-[#08679F]/40 hover:shadow-[0_20px_50px_rgba(8,103,159,0.12)]"
               >
+                {/* Dynamic Spotlight Glow effect inside left card */}
+                <div
+                  className="pointer-events-none absolute -inset-px rounded-[22px] opacity-0 transition-opacity duration-300"
+                  style={{
+                    opacity: isLeftHovered ? 1 : 0,
+                    background: `radial-gradient(500px circle at ${leftMousePos.x}px ${leftMousePos.y}px, rgba(8, 103, 159, 0.08), transparent 80%)`,
+                  }}
+                />
+
+                {/* Card Border Light Highlight */}
+                <div
+                  className="pointer-events-none absolute -inset-px rounded-[22px] opacity-0 transition-opacity duration-300"
+                  style={{
+                    opacity: isLeftHovered ? 1 : 0,
+                    background: `radial-gradient(350px circle at ${leftMousePos.x}px ${leftMousePos.y}px, rgba(8, 103, 159, 0.25), transparent 100%)`,
+                    maskImage: "linear-gradient(#black, #black) content-box, linear-gradient(#black, #black)",
+                    maskComposite: "exclude",
+                    WebkitMaskComposite: "xor",
+                    padding: "1px",
+                  }}
+                />
+
                 {/* Medical logo */}
-                <div className="mb-6 flex justify-center">
+                <div className="relative z-10 mb-6 flex justify-center">
                   <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-linear-to-br from-blue-50 to-slate-50 shadow-sm">
                     <div className="relative">
                       <span className="absolute left-1/2 top-0 h-6 w-2 -translate-x-1/2 rounded-full bg-[#08679F]" />
@@ -86,7 +171,7 @@ function Login() {
                 </div>
 
                 {/* Heading */}
-                <div className="mb-7 text-center">
+                <div className="relative z-10 mb-7 text-center">
                   <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                     Welcome Back
                   </h1>
@@ -96,7 +181,7 @@ function Login() {
                 </div>
 
                 {/* Authentication method switcher */}
-                <div className="mb-6 rounded-xl border border-slate-200/60 bg-slate-100/90 p-1">
+                <div className="relative z-10 mb-6 rounded-xl border border-slate-200/60 bg-slate-100/90 p-1">
                   <div className="grid grid-cols-2 gap-1">
                     <button
                       type="button"
@@ -160,7 +245,7 @@ function Login() {
                 </div>
 
                 {/* Login form */}
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="relative z-10 space-y-4">
                   {/* Email */}
                   <div>
                     <label
@@ -316,14 +401,18 @@ function Login() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="group mt-2 h-11 w-full rounded-xl bg-[#08679F] px-5 text-sm font-semibold text-white shadow-md shadow-[#08679F]/20 transition-all duration-150 hover:-translate-y-0.5 hover:bg-[#07557F] hover:shadow-lg hover:shadow-[#08679F]/25 active:translate-y-0 active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-[#08679F]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group relative overflow-hidden mt-2 h-11 w-full rounded-xl bg-[#08679F] px-5 text-sm font-semibold text-white shadow-md shadow-[#08679F]/20 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#07557F] hover:shadow-[0_10px_25px_-5px_rgba(8,103,159,0.4)] active:translate-y-0 active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-[#08679F]/20 disabled:cursor-not-allowed disabled:opacity-60"
                   >
+                    <span className="absolute inset-0 rounded-xl border border-white/20 transition-opacity duration-300 group-hover:opacity-100" />
+                    <span className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
+                    <span className="absolute -inset-1 rounded-xl bg-cyan-400/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
                     <span className="relative z-10 inline-flex items-center justify-center gap-2">
                       {loading ? "Authenticating..." : "Authenticate"}
 
                       {!loading && (
                         <svg
-                          className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-1"
+                          className="h-4 w-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5 group-hover:scale-110"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
@@ -338,22 +427,61 @@ function Login() {
                 </form>
 
                 {/* Status footer */}
-                <div className="mt-6 flex items-center justify-center gap-2 text-[11px] font-medium text-slate-400">
+                <div className="relative z-10 mt-6 flex items-center justify-center gap-2 text-[11px] font-medium text-slate-400">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
                   Clinical workspace ready
                 </div>
               </div>
             </section>
 
-            {/* Right visual panel */}
-            <section className="hidden items-center justify-center lg:flex">
+            {/* Right visual panel with 3D perspective & Cursor Spotlight */}
+            <section className="hidden items-center justify-center lg:flex perspective-[1000px]">
               <div className="relative w-full max-w-xl">
-                <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/60 p-9 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl">
+                <div
+                  ref={rightCardRef}
+                  onMouseMove={handleMouseMoveRightCard}
+                  onMouseEnter={() => setIsRightHovered(true)}
+                  onMouseLeave={() => {
+                    setIsRightHovered(false);
+                    setRightCardRotate({ x: 0, y: 0 });
+                  }}
+                  style={{
+                    transform: isRightHovered
+                      ? `rotateX(${rightCardRotate.x}deg) rotateY(${rightCardRotate.y}deg) translateZ(10px)`
+                      : "rotateX(0deg) rotateY(0deg) translateZ(0px)",
+                    transition: isRightHovered
+                      ? "transform 0.1s ease-out, box-shadow 0.3s ease-out"
+                      : "transform 0.5s ease-out, box-shadow 0.5s ease-out",
+                  }}
+                  className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/60 p-9 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl hover:border-[#08679F]/40 hover:shadow-[0_20px_50px_rgba(8,103,159,0.12)]"
+                >
+                  {/* Dynamic Spotlight Glow Effect */}
+                  <div
+                    className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition-opacity duration-300"
+                    style={{
+                      opacity: isRightHovered ? 1 : 0,
+                      background: `radial-gradient(600px circle at ${rightMousePos.x}px ${rightMousePos.y}px, rgba(8, 103, 159, 0.08), transparent 80%)`,
+                    }}
+                  />
+
+                  {/* Border Light Highlight */}
+                  <div
+                    className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition-opacity duration-300"
+                    style={{
+                      opacity: isRightHovered ? 1 : 0,
+                      background: `radial-gradient(400px circle at ${rightMousePos.x}px ${rightMousePos.y}px, rgba(8, 103, 159, 0.25), transparent 100%)`,
+                      maskImage: "linear-gradient(#black, #black) content-box, linear-gradient(#black, #black)",
+                      maskComposite: "exclude",
+                      WebkitMaskComposite: "xor",
+                      padding: "1px",
+                    }}
+                  />
+
                   {/* Decorative accents */}
                   <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#08679F]/10 blur-2xl" />
                   <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-cyan-500/10 blur-2xl" />
 
-                  <div className="relative">
+                  <div className="relative z-10">
                     <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#08679F] text-white shadow-md shadow-[#08679F]/20">
                       <div className="relative h-6 w-6">
                         <span className="absolute left-1/2 top-0 h-6 w-2 -translate-x-1/2 rounded-full bg-white" />
@@ -378,10 +506,10 @@ function Login() {
                       system.
                     </p>
 
-                    {/* Feature cards */}
+                    {/* Feature cards with subtle hover lift */}
                     <div className="mt-8 grid grid-cols-3 gap-3">
-                      <div className="rounded-xl border border-slate-200/80 bg-white/80 p-4 backdrop-blur-md">
-                        <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-[#08679F]">
+                      <div className="group/card rounded-xl border border-slate-200/80 bg-white/80 p-4 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:border-[#08679F]/30 hover:shadow-md">
+                        <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-[#08679F] transition-transform duration-200 group-hover/card:scale-110">
                           <svg
                             className="h-5 w-5"
                             viewBox="0 0 24 24"
@@ -403,8 +531,8 @@ function Login() {
                         </p>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200/80 bg-white/80 p-4 backdrop-blur-md">
-                        <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
+                      <div className="group/card rounded-xl border border-slate-200/80 bg-white/80 p-4 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:border-cyan-500/30 hover:shadow-md">
+                        <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600 transition-transform duration-200 group-hover/card:scale-110">
                           <svg
                             className="h-5 w-5"
                             viewBox="0 0 24 24"
@@ -424,8 +552,8 @@ function Login() {
                         </p>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200/80 bg-white/80 p-4 backdrop-blur-md">
-                        <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-[#6366F1]">
+                      <div className="group/card rounded-xl border border-slate-200/80 bg-white/80 p-4 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:border-indigo-500/30 hover:shadow-md">
+                        <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-[#6366F1] transition-transform duration-200 group-hover/card:scale-110">
                           <svg
                             className="h-5 w-5"
                             viewBox="0 0 24 24"
@@ -510,4 +638,3 @@ function Login() {
 }
 
 export default Login;
-

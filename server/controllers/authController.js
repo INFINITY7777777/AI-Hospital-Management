@@ -196,7 +196,143 @@ const loginUser = async (req, res) => {
   }
 };
 
+// --------------------------------------------------
+// CHANGE PASSWORD (SELF)
+// --------------------------------------------------
+const updatePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current and new passwords are required." });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters." });
+    }
+
+    const userRes = await db.query("SELECT password FROM users WHERE id = $1", [userId]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User profile not found." });
+    }
+
+    const user = userRes.rows[0];
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Incorrect current password." });
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await db.query("UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", [
+      newPasswordHash,
+      userId,
+    ]);
+
+    res.status(200).json({ success: true, message: "Password updated successfully." });
+  } catch (error) {
+    console.error("[Update Password Error]:", error);
+    res.status(500).json({ error: "Failed to update password." });
+  }
+};
+
+// --------------------------------------------------
+// UPDATE OR SET MPIN (SELF - WITH CURRENT MPIN VERIFICATION)
+// --------------------------------------------------
+const updateMpin = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentMpin, newMpin } = req.body;
+
+    if (!newMpin || !/^\d{4,6}$/.test(newMpin)) {
+      return res.status(400).json({ error: "New MPIN must be a 4 to 6 digit number." });
+    }
+
+    const userRes = await db.query(
+      "SELECT mpin_hash, is_mpin_enabled FROM users WHERE id = $1",
+      [userId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User profile not found." });
+    }
+
+    const user = userRes.rows[0];
+
+    // If MPIN is already enabled, require current MPIN verification
+    if (user.is_mpin_enabled && user.mpin_hash) {
+      if (!currentMpin) {
+        return res.status(400).json({ error: "Current MPIN is required to set a new one." });
+      }
+
+      const isMpinMatch = await bcrypt.compare(currentMpin, user.mpin_hash);
+      if (!isMpinMatch) {
+        return res.status(401).json({ error: "Incorrect current MPIN." });
+      }
+    }
+
+    const newMpinHash = await bcrypt.hash(newMpin, 10);
+
+    await db.query(
+      `UPDATE users 
+       SET mpin_hash = $1, 
+           is_mpin_enabled = true, 
+           failed_mpin_attempts = 0, 
+           mpin_locked_until = NULL, 
+           updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2`,
+      [newMpinHash, userId]
+    );
+
+    res.status(200).json({ success: true, message: "MPIN updated successfully." });
+  } catch (error) {
+    console.error("[Update MPIN Error]:", error);
+    res.status(500).json({ error: "Failed to update MPIN." });
+  }
+};
+
+// --------------------------------------------------
+// ADMIN RESET USER PASSWORD (FORGOTTEN PASSWORD WORKFLOW)
+// --------------------------------------------------
+const adminResetUserPassword = async (req, res) => {
+  try {
+    const { targetUserId, tempPassword } = req.body;
+
+    if (!targetUserId || !tempPassword) {
+      return res.status(400).json({ error: "Target User ID and temporary password are required." });
+    }
+
+    if (tempPassword.length < 6) {
+      return res.status(400).json({ error: "Temporary password must be at least 6 characters." });
+    }
+
+    const tempHash = await bcrypt.hash(tempPassword, 10);
+
+    const result = await db.query(
+      "UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, full_name, email",
+      [tempHash, targetUserId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Target user account not found." });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Password for ${result.rows[0].full_name} has been reset successfully.`,
+    });
+  } catch (error) {
+    console.error("[Admin Password Reset Error]:", error);
+    res.status(500).json({ error: "Failed to reset password." });
+  }
+};
+
 module.exports = {
   registerUser,
-  loginUser
+  loginUser,
+  updatePassword,
+  updateMpin,
+  adminResetUserPassword,
+  
 };

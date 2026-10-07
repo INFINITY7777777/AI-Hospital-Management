@@ -1,11 +1,13 @@
 // ==========================================================
 // DOCTORS PAGE
 // Manages doctor registration and doctor list
+// Integrated with Animated Sidebar
 // ==========================================================
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
+import Sidebar from "../components/Sidebar.jsx";
 import AddDoctorForm from "../components/AddDoctorForm.jsx";
 import DoctorList from "../components/DoctorList.jsx";
 
@@ -30,14 +32,20 @@ function Doctors() {
   // ==========================================================
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+    <div className="relative min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+      {/* ANIMATED SIDEBAR OVERLAY */}
+      <Sidebar />
+
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* =====================================================
-            BACK TO DASHBOARD
+            TOP ACTION ROW: MENU & BACK TO DASHBOARD ALIGNED
         ====================================================== */}
 
-        <div>
+        <div className="flex items-center gap-3 pt-1 sm:pt-0">
+          {/* Spacer div matching the menu button width so Back button stays neatly next to it */}
+          <div className="w-22 shrink-0" />
+
           <Link
             to="/dashboard"
             className="
