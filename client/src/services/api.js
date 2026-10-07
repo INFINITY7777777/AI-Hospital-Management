@@ -1,78 +1,49 @@
-// ==========================================================
-// AXIOS API CLIENT
-// ==========================================================
+
+// client/src/services/api.js
 
 import axios from "axios";
 
-// ==========================================================
-// API INSTANCE
-// ==========================================================
-
 const api = axios.create({
-    baseURL: "http://localhost:5000/api",
-
-    headers: {
-        "Content-Type": "application/json"
-    }
+  baseURL: "http://localhost:5000/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// ==========================================================
-// REQUEST INTERCEPTOR
-// Automatically attaches JWT token
-// ==========================================================
-
+// Attach the JWT token to every API request.
 api.interceptors.request.use(
-    (config) => {
+  (config) => {
+    const token = localStorage.getItem("token");
 
-        const token = localStorage.getItem("token");
-
-        if (token) {
-
-            config.headers = config.headers || {};
-
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-
-        return config;
-    },
-
-    (error) => {
-        return Promise.reject(error);
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
     }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
 );
 
-// ==========================================================
-// RESPONSE INTERCEPTOR
-// ==========================================================
-
+// Handle API responses and authentication errors.
 api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
 
-    (response) => {
-        return response;
-    },
-
-    (error) => {
-
-        if (error.response?.status === 401) {
-
-            console.error(
-                "Authentication failed. JWT token is missing or invalid."
-            );
-
-            // Optional:
-            // localStorage.removeItem("token");
-            // window.location.href = "/login";
-        }
-
-        if (error.response?.status === 403) {
-
-            console.error(
-                "Authorization failed. User does not have permission."
-            );
-        }
-
-        return Promise.reject(error);
+    if (status === 401) {
+      console.error("Authentication failed: token missing, expired, or invalid.");
+    } else if (status === 403) {
+      console.error("Access denied: insufficient permissions.");
+    } else if (!error.response) {
+      console.error(
+        "Cannot connect to the backend. Check that the server is running on port 5000."
+      );
     }
+
+    return Promise.reject(error);
+  }
 );
 
 export default api;
+

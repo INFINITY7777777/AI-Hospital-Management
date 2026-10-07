@@ -13,7 +13,8 @@ const registerUser = async (req, res) => {
       phone,
       specialization,
       registration_number,
-      department
+      department,
+      experience
     } = req.body;
 
     // Check required fields
@@ -41,7 +42,7 @@ const registerUser = async (req, res) => {
     // Hash MPIN
     const mpinHash = await bcrypt.hash(mpin, 10);
 
-    // Insert User - Target 'password' column per schema
+    // Insert User - Target exact columns present in 'users' table schema
     const result = await db.query(
       `
       INSERT INTO users
@@ -57,7 +58,7 @@ const registerUser = async (req, res) => {
         department
       )
       VALUES
-      ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 
       RETURNING
         id,
@@ -71,17 +72,48 @@ const registerUser = async (req, res) => {
         passwordHash,
         mpinHash,
         role,
-        phone,
-        specialization,
-        registration_number,
-        department
+        phone || null,
+        specialization || null,
+        registration_number || null,
+        department || null
       ]
     );
+
+    const newUser = result.rows[0];
+
+    // AUTOMATIC SYNCHRONIZATION: Insert into 'doctors' table if role is Doctor
+    if (String(role).toLowerCase().trim() === "doctor") {
+      try {
+        await db.query(
+          `
+          INSERT INTO doctors (
+            doctor_name,
+            specialization,
+            phone,
+            email,
+            department,
+            experience
+          )
+          VALUES ($1, $2, $3, $4, $5, $6);
+          `,
+          [
+            full_name,
+            specialization || "General Physician",
+            phone || null,
+            email || null,
+            department || "General",
+            experience ? Number(experience) : 0
+          ]
+        );
+      } catch (docSyncError) {
+        console.error("[Doctor Sync Error]:", docSyncError.message);
+      }
+    }
 
     res.status(201).json({
       success: true,
       message: "Registration Successful",
-      user: result.rows[0]
+      user: newUser
     });
 
   } catch (error) {

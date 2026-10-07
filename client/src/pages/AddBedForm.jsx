@@ -8,7 +8,7 @@ function AddBedForm() {
   const [bedData, setBedData] = useState({
     bedNumber: "",
     ward: "",
-    bedType: "",
+    bedType: "General",
     status: "Available",
   });
 
@@ -30,19 +30,26 @@ function AddBedForm() {
     try {
       setLoading(true);
 
-      await api.post("/beds", {
-        bedNumber: bedData.bedNumber,
+      // Map camelCase form state to snake_case backend expectations
+      const payload = {
+        bed_number: bedData.bedNumber,
         ward: bedData.ward,
-        bedType: bedData.bedType,
+        bed_type: bedData.bedType,
         status: bedData.status,
-      });
+      };
 
-      alert("Bed added successfully");
-      navigate("/beds");
-    } catch (error) {
-      console.error("Error adding bed:", error);
+      const response = await api.post("/beds", payload);
+
+      if (response.data?.success) {
+        alert("Bed added successfully");
+        navigate("/beds");
+      }
+    } catch (err) {
+      console.error("Error adding bed:", err);
       setError(
-        error.response?.data?.error || "Failed to add bed"
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to add bed"
       );
     } finally {
       setLoading(false);
@@ -118,7 +125,7 @@ function AddBedForm() {
           {/* BED NUMBER */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Bed Number
+              Bed Number <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -134,7 +141,7 @@ function AddBedForm() {
           {/* WARD */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Ward
+              Ward <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -150,7 +157,7 @@ function AddBedForm() {
           {/* BED TYPE */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Bed Type
+              Bed Type <span className="text-red-500">*</span>
             </label>
             <select
               name="bedType"
@@ -159,7 +166,6 @@ function AddBedForm() {
               required
               className="w-full h-10 px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-900 transition-all duration-150 shadow-xs focus:border-[#08679F] focus:outline-none focus:ring-4 focus:ring-[#08679F]/10"
             >
-              <option value="">Select Bed Type</option>
               <option value="General">General</option>
               <option value="ICU">ICU</option>
               <option value="Private">Private</option>

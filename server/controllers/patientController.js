@@ -1,327 +1,486 @@
-// ==========================================================
-// PATIENT CONTROLLER
-// Handles all patient-related operations with role-based filtering
-// ==========================================================
+const pool = require("../config/db");
 
-const db = require("../config/db");
+// --------------------------------------------------
+// HELPERS
+// --------------------------------------------------
 
-// ==========================================================
+const isValidId = (id) =>
+    id !== undefined && id !== null && /^\d+$/.test(String(id)) &&
+    Number(id) > 0;
+
+const getRole = (req) =>
+    String(req.user?.role || "").toLowerCase();
+
+const getUserId = (req) =>
+    req.user?.id ?? req.user?.userId ?? req.user?.user_id ?? null;
+
+const doctorPatientCondition = (patientAlias = "p", userAlias = "u") => `
+    (
+        LOWER(TRIM(COALESCE(${patientAlias}.doctor, ''))) = LOWER(TRIM(COALESCE(${userAlias}.full_name, '')))
+        OR LOWER(TRIM(COALESCE(${patientAlias}.doctor, ''))) LIKE CONCAT('%', LOWER(TRIM(SPLIT_PART(${userAlias}.full_name, ' ', 1))), '%')
+        OR LOWER(TRIM(COALESCE(${patientAlias}.doctor, ''))) = LOWER(TRIM(COALESCE(${userAlias}.email, '')))
+    )
+`;
+
+const getPatientSelect = () => `
+    SELECT
+        p.*,
+        COALESCE(current_bed.admission_date, p.admission_date) AS admission_date,
+        current_bed.bed_number AS current_bed_number,
+        current_bed.ward AS current_ward,
+        current_bed.bed_number AS bed_number,
+        current_bed.ward AS ward
+    FROM patients p
+    LEFT JOIN LATERAL (
+        SELECT b.bed_number, b.ward, a.admission_date
+        FROM admissions a
+        JOIN beds b ON b.id = a.bed_id
+        WHERE a.patient_id = p.id
+          AND LOWER(COALESCE(a.status, '')) = 'admitted'
+          AND LOWER(COALESCE(b.status, '')) = 'occupied'
+          AND b.patient_id = p.id
+        ORDER BY a.admission_date DESC NULLS LAST, a.id DESC
+        LIMIT 1
+    ) current_bed ON TRUE
+`;
+
+// --------------------------------------------------
 // ADD PATIENT
-// ==========================================================
+// --------------------------------------------------
+
 const addPatient = async (req, res) => {
+    const {
+        patient_name,
+        age,
+        gender,
+        blood_group,
+        phone,
+        address,
+        emergency_contact,
+        doctor,
+        diagnosis,
+        admission_date,
+        admissionDate
+    } = req.body;
+
+    const finalAdmissionDate = admission_date || admissionDate || null;
+
+    if (!patient_name || !String(patient_name).trim()) {
+        return res.status(400).json({
+            success: false,
+            message: "Patient name is required.",
+        });
+    }
+
+    const parsedAge = Number(age);
+
+    if (!Number.isInteger(parsedAge) || parsedAge < 1 || parsedAge > 150) {
+        return res.status(400).json({
+            success: false,
+            message: "Age must be between 1 and 150.",
+        });
+    }
+
+    if (!gender || !String(gender).trim()) {
+        return res.status(400).json({
+            success: false,
+            message: "Gender is required.",
+        });
+    }
+
     try {
-        const {
-            patientName,
-            age,
-            gender,
-            bloodGroup,
-            phone,
-            address,
-            emergencyContact,
-            doctor,
-            ward,
-            bedNumber,
-            diagnosis,
-            admissionDate
-        } = req.body;
-
-        if (!patientName || !age || !gender) {
-            return res.status(400).json({
-                error: "Patient name, age and gender are required."
-            });
-        }
-
-        const result = await db.query(
-            `
-            INSERT INTO patients (
-                patient_name,
-                age,
-                gender,
-                blood_group,
-                phone,
-                address,
-                emergency_contact,
-                doctor,
-                ward,
-                bed_number,
-                diagnosis,
-                admission_date
+        const result = await pool.query(
+            `INSERT INTO patients (
+                patient_name, age, gender, blood_group, phone,
+                address, emergency_contact, doctor, diagnosis, admission_date
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            RETURNING *;
-            `,
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+            RETURNING *`,
             [
-                patientName,
-                age,
-                gender,
-                bloodGroup || null,
+                String(patient_name).trim(),
+                parsedAge,
+                String(gender).trim(),
+                blood_group || null,
                 phone || null,
                 address || null,
-                emergencyContact || null,
+                emergency_contact || null,
                 doctor || null,
-                ward || null,
-                bedNumber || null,
                 diagnosis || null,
-                admissionDate || null
+                finalAdmissionDate
             ]
         );
 
         return res.status(201).json({
-            message: "Patient added successfully",
-            patient: result.rows[0]
+            success: true,
+            message: "Patient added successfully.",
+            patient: result.rows[0],
         });
     } catch (error) {
-        console.error("[ADD PATIENT ERROR]:", error);
+        console.error("addPatient:", error.message);
         return res.status(500).json({
-            error: "Failed to add patient."
+            success: false,
+            message: "Failed to add patient.",
         });
     }
 };
 
-// ==========================================================
-// GET ALL PATIENTS (ROLE-FILTERED)
-// ==========================================================
+// --------------------------------------------------
+// GET ALL PATIENTS
+// --------------------------------------------------
+
 const getAllPatients = async (req, res) => {
+    const role = getRole(req);
+    const userId = getUserId(req);
+
     try {
-        const { id: userId, role } = req.user || {};
-        const normalizedRole = String(role || "").toLowerCase().trim();
+        let query = `${getPatientSelect()} ORDER BY p.id DESC`;
+        let params = [];
 
-        let query = "";
-        let queryParams = [];
-
-        if (normalizedRole === "doctor") {
-            // Doctors see patients assigned to them (matching assigned doctor column by name or ID)
-            query = `
-                SELECT DISTINCT p.*
-                FROM patients p
-                LEFT JOIN users u ON u.id = $1
-                LEFT JOIN doctors d ON (
-                    LOWER(TRIM(d.email)) = LOWER(TRIM(u.email)) 
-                    OR LOWER(TRIM(d.doctor_name)) = LOWER(TRIM(u.full_name))
-                )
-                WHERE 
-                    p.doctor IS NOT NULL AND (
-                        LOWER(TRIM(p.doctor)) = LOWER(TRIM(u.full_name))
-                        OR LOWER(TRIM(p.doctor)) = LOWER(TRIM(d.doctor_name))
-                        OR TRIM(p.doctor) = CAST($1 AS TEXT)
-                        OR (d.id IS NOT NULL AND TRIM(p.doctor) = CAST(d.id AS TEXT))
-                    )
-                ORDER BY p.created_at DESC
-            `;
-            queryParams = [userId];
-        } else if (normalizedRole === "staff" || normalizedRole === "nurse") {
-            // Staff see actively admitted patients or ward patients
-            query = `
-                SELECT *
-                FROM patients
-                WHERE ward IS NOT NULL OR bed_number IS NOT NULL
-                ORDER BY created_at DESC
-            `;
-        } else {
-            // Admin sees all patients
-            query = `
-                SELECT *
-                FROM patients
-                ORDER BY created_at DESC
-            `;
-        }
-
-        const result = await db.query(query, queryParams);
-
-        return res.status(200).json({
-            patients: result.rows
-        });
-    } catch (error) {
-        console.error("[GET ALL PATIENTS ERROR]:", error);
-        return res.status(500).json({
-            error: "Failed to fetch patients."
-        });
-    }
-};
-
-// ==========================================================
-// GET PATIENT BY ID (ROLE-GUARDED)
-// ==========================================================
-const getPatientById = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { id: userId, role } = req.user || {};
-        const normalizedRole = String(role || "").toLowerCase().trim();
-
-        const result = await db.query(
-            `
-            SELECT *
-            FROM patients
-            WHERE id = $1
-            `,
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Patient not found."
-            });
-        }
-
-        const patient = result.rows[0];
-
-        // Enforce doctor ownership guard if accessed directly via URL
-        if (normalizedRole === "doctor") {
-            const docCheck = await db.query(
-                `
-                SELECT u.full_name, u.email, d.id as doc_table_id, d.doctor_name 
-                FROM users u 
-                LEFT JOIN doctors d ON (
-                    LOWER(TRIM(d.email)) = LOWER(TRIM(u.email)) 
-                    OR LOWER(TRIM(d.doctor_name)) = LOWER(TRIM(u.full_name))
-                )
-                WHERE u.id = $1
-                `,
-                [userId]
-            );
-
-            const docInfo = docCheck.rows[0] || {};
-            const patientDoc = String(patient.doctor || "").toLowerCase().trim();
-            
-            const isAssigned = 
-                patientDoc !== "" && (
-                    patientDoc === (docInfo.full_name || "").toLowerCase().trim() ||
-                    patientDoc === (docInfo.doctor_name || "").toLowerCase().trim() ||
-                    patientDoc === String(userId).toLowerCase().trim() ||
-                    (docInfo.doc_table_id && patientDoc === String(docInfo.doc_table_id).toLowerCase().trim())
-                );
-
-            if (!isAssigned) {
+        if (role === "doctor") {
+            if (!isValidId(userId)) {
                 return res.status(403).json({
-                    error: "Access denied: You are not the assigned doctor for this patient."
+                    success: false,
+                    message: "Doctor account could not be verified.",
                 });
             }
+
+            query = `
+                ${getPatientSelect()}
+                JOIN users u ON u.id = $1
+                WHERE ${doctorPatientCondition("p", "u")}
+                ORDER BY p.id DESC
+            `;
+            params = [Number(userId)];
         }
 
+        const result = await pool.query(query, params);
+
         return res.status(200).json({
-            patient
+            success: true,
+            patients: result.rows,
         });
     } catch (error) {
-        console.error("[GET PATIENT ERROR]:", error);
+        console.error("getAllPatients:", error.message);
         return res.status(500).json({
-            error: "Failed to fetch patient."
+            success: false,
+            message: "Failed to retrieve patients.",
         });
     }
 };
 
-// ==========================================================
-// UPDATE PATIENT
-// ==========================================================
-const updatePatient = async (req, res) => {
+// --------------------------------------------------
+// GET PATIENT BY ID
+// --------------------------------------------------
+
+const getPatientById = async (req, res) => {
+    const { id } = req.params;
+    const role = getRole(req);
+    const userId = getUserId(req);
+
+    if (!isValidId(id)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid patient ID.",
+        });
+    }
+
     try {
-        const { id } = req.params;
+        let query = `${getPatientSelect()} WHERE p.id = $1`;
+        let params = [Number(id)];
 
-        const {
-            patientName,
-            age,
-            gender,
-            bloodGroup,
-            phone,
-            address,
-            emergencyContact,
-            doctor,
-            ward,
-            bedNumber,
-            diagnosis,
-            admissionDate
-        } = req.body;
+        if (role === "doctor") {
+            if (!isValidId(userId)) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Doctor account could not be verified.",
+                });
+            }
 
-        if (!patientName || !age || !gender) {
-            return res.status(400).json({
-                error: "Patient name, age and gender are required."
+            query = `
+                ${getPatientSelect()}
+                JOIN users u ON u.id = $2
+                WHERE p.id = $1
+                  AND ${doctorPatientCondition("p", "u")}
+            `;
+            params = [Number(id), Number(userId)];
+        }
+
+        const result = await pool.query(query, params);
+
+        if (!result.rows.length) {
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found or access denied.",
             });
         }
 
-        const result = await db.query(
-            `
-            UPDATE patients
-            SET
-                patient_name = $1,
-                age = $2,
-                gender = $3,
-                blood_group = $4,
-                phone = $5,
-                address = $6,
-                emergency_contact = $7,
-                doctor = $8,
-                ward = $9,
-                bed_number = $10,
-                diagnosis = $11,
-                admission_date = $12
-            WHERE id = $13
-            RETURNING *;
-            `,
+        return res.status(200).json({
+            success: true,
+            patient: result.rows[0],
+        });
+    } catch (error) {
+        console.error("getPatientById:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to retrieve patient.",
+        });
+    }
+};
+
+// --------------------------------------------------
+// UPDATE PATIENT
+// --------------------------------------------------
+
+const updatePatient = async (req, res) => {
+    const { id } = req.params;
+    const role = getRole(req);
+    const userId = getUserId(req);
+
+    if (!isValidId(id)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid patient ID.",
+        });
+    }
+
+    const {
+        patient_name,
+        patientName,
+        age,
+        gender,
+        blood_group,
+        bloodGroup,
+        phone,
+        address,
+        emergency_contact,
+        emergencyContact,
+        doctor,
+        diagnosis,
+        admission_date,
+        admissionDate
+    } = req.body;
+
+    const finalName = patient_name || patientName;
+    const finalBloodGroup = blood_group || bloodGroup;
+    const finalEmergencyContact = emergency_contact || emergencyContact;
+    const finalAdmissionDate = admission_date || admissionDate;
+
+    if (
+        age !== undefined &&
+        (!Number.isInteger(Number(age)) ||
+            Number(age) < 1 ||
+            Number(age) > 150)
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: "Age must be between 1 and 150.",
+        });
+    }
+
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        let lockQuery = `
+            SELECT p.*
+            FROM patients p
+            WHERE p.id = $1
+            FOR UPDATE
+        `;
+        let lockParams = [Number(id)];
+
+        if (role === "doctor") {
+            if (!isValidId(userId)) {
+                await client.query("ROLLBACK");
+                return res.status(403).json({
+                    success: false,
+                    message: "Doctor account could not be verified.",
+                });
+            }
+
+            lockQuery = `
+                SELECT p.*
+                FROM patients p
+                JOIN users u ON u.id = $2
+                WHERE p.id = $1
+                  AND ${doctorPatientCondition("p", "u")}
+                FOR UPDATE OF p
+            `;
+            lockParams = [Number(id), Number(userId)];
+        }
+
+        const existing = await client.query(lockQuery, lockParams);
+
+        if (!existing.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found or access denied.",
+            });
+        }
+
+        const current = existing.rows[0];
+
+        const updatedDoctor =
+            role === "doctor" ? current.doctor : (doctor ?? current.doctor);
+
+        const newAdmissionDate = finalAdmissionDate === undefined 
+            ? current.admission_date 
+            : (finalAdmissionDate || null);
+
+        // Update Patients table
+        const result = await client.query(
+            `UPDATE patients
+             SET patient_name = $1,
+                 age = $2,
+                 gender = $3,
+                 blood_group = $4,
+                 phone = $5,
+                 address = $6,
+                 emergency_contact = $7,
+                 doctor = $8,
+                 diagnosis = $9,
+                 admission_date = $10
+             WHERE id = $11
+             RETURNING *`,
             [
-                patientName,
-                age,
-                gender,
-                bloodGroup || null,
-                phone || null,
-                address || null,
-                emergencyContact || null,
-                doctor || null,
-                ward || null,
-                bedNumber || null,
-                diagnosis || null,
-                admissionDate || null,
-                id
+                finalName === undefined ? current.patient_name : String(finalName).trim(),
+                age === undefined ? current.age : Number(age),
+                gender === undefined ? current.gender : gender,
+                finalBloodGroup === undefined ? current.blood_group : finalBloodGroup,
+                phone === undefined ? current.phone : phone,
+                address === undefined ? current.address : address,
+                finalEmergencyContact === undefined ? current.emergency_contact : finalEmergencyContact,
+                updatedDoctor,
+                diagnosis === undefined ? current.diagnosis : diagnosis,
+                newAdmissionDate,
+                Number(id),
             ]
         );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Patient not found."
-            });
+        // Synchronize Active Admissions record if it exists
+        if (newAdmissionDate) {
+            await client.query(
+                `UPDATE admissions
+                 SET admission_date = $1
+                 WHERE patient_id = $2 AND status = 'Admitted'`,
+                [newAdmissionDate, Number(id)]
+            );
+
+            await client.query(
+                `UPDATE patient_stay_history
+                 SET start_date = $1
+                 WHERE patient_id = $2 AND status = 'Active'`,
+                [newAdmissionDate, Number(id)]
+            );
         }
 
+        await client.query("COMMIT");
+
         return res.status(200).json({
-            message: "Patient updated successfully",
-            patient: result.rows[0]
+            success: true,
+            message: "Patient updated successfully.",
+            patient: result.rows[0],
         });
     } catch (error) {
-        console.error("[UPDATE PATIENT ERROR]:", error);
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("updatePatient:", error.message);
+
         return res.status(500).json({
-            error: "Failed to update patient."
+            success: false,
+            message: "Failed to update patient.",
         });
+    } finally {
+        client.release();
     }
 };
 
-// ==========================================================
+// --------------------------------------------------
 // DELETE PATIENT
-// ==========================================================
-const deletePatient = async (req, res) => {
-    try {
-        const { id } = req.params;
+// --------------------------------------------------
 
-        const result = await db.query(
-            `
-            DELETE FROM patients
-            WHERE id = $1
-            RETURNING *;
-            `,
-            [id]
+const deletePatient = async (req, res) => {
+    const { id } = req.params;
+
+    if (!isValidId(id)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid patient ID.",
+        });
+    }
+
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        const patientResult = await client.query(
+            "SELECT id FROM patients WHERE id = $1 FOR UPDATE",
+            [Number(id)]
         );
 
-        if (result.rows.length === 0) {
+        if (!patientResult.rows.length) {
+            await client.query("ROLLBACK");
             return res.status(404).json({
-                error: "Patient not found."
+                success: false,
+                message: "Patient not found.",
             });
         }
 
+        const admissions = await client.query(
+            "SELECT id FROM admissions WHERE patient_id = $1 LIMIT 1",
+            [Number(id)]
+        );
+
+        const stays = await client.query(
+            "SELECT id FROM patient_stay_history WHERE patient_id = $1 LIMIT 1",
+            [Number(id)]
+        );
+
+        const beds = await client.query(
+            `SELECT id
+             FROM beds
+             WHERE patient_id = $1
+               AND LOWER(COALESCE(status, '')) = 'occupied'
+             LIMIT 1`,
+            [Number(id)]
+        );
+
+        if (
+            admissions.rows.length ||
+            stays.rows.length ||
+            beds.rows.length
+        ) {
+            await client.query("ROLLBACK");
+
+            return res.status(409).json({
+                success: false,
+                message:
+                    "Patient cannot be deleted because admission, stay-history, or occupied-bed records exist. Preserve the records and discharge/reconcile them through the appropriate workflow.",
+            });
+        }
+
+        await client.query("DELETE FROM patients WHERE id = $1", [
+            Number(id),
+        ]);
+
+        await client.query("COMMIT");
+
         return res.status(200).json({
-            message: "Patient deleted successfully",
-            patient: result.rows[0]
+            success: true,
+            message: "Patient deleted successfully.",
         });
     } catch (error) {
-        console.error("[DELETE PATIENT ERROR]:", error);
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("deletePatient:", error.message);
+
         return res.status(500).json({
-            error: "Failed to delete patient."
+            success: false,
+            message: "Failed to delete patient.",
         });
+    } finally {
+        client.release();
     }
 };
 
@@ -330,5 +489,5 @@ module.exports = {
     getAllPatients,
     getPatientById,
     updatePatient,
-    deletePatient
+    deletePatient,
 };

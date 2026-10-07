@@ -108,15 +108,25 @@ function BedList() {
 
     try {
       setActionLoading(true);
+
+      // Ensure payload matches backend expectations (both camelCase and snake_case provided, or URL parameter used)
       await api.put(`/beds/${selectedBed.id}/assign`, {
+        patient_id: Number(selectedPatientId),
         patientId: Number(selectedPatientId),
+        bed_id: Number(selectedBed.id),
+        bedId: Number(selectedBed.id),
       });
+
       alert("Patient assigned to bed successfully.");
       await fetchBeds();
       closeModal();
     } catch (error) {
       console.error("Error assigning patient:", error);
-      alert(error.response?.data?.error || "Failed to assign patient.");
+      alert(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to assign patient."
+      );
     } finally {
       setActionLoading(false);
     }

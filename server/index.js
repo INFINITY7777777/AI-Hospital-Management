@@ -1,85 +1,83 @@
-/***********************************************************************
- * File Name : index.js
- * Purpose   : Main Entry Point of the Backend Server
- * Project   : AI-Powered Hospital Management System
- ***********************************************************************/
 
-// ========================= IMPORTS =========================
+// server/index.js
 
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
-// Database Connection
 require("./config/db");
 
-// API Routes Imports
-const aiRoutes = require("./routes/aiRoutes");
-const authRoutes = require("./routes/authRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-const patientRoutes = require("./routes/patientRoutes");
-const doctorRoutes = require("./routes/doctorRoutes");
-const appointmentRoutes = require("./routes/appointmentRoutes");
-const dashboardRoutes = require("./routes/dashboardRoutes");
-const bedRoutes = require("./routes/bedRoutes");
-const admissionRoutes = require("./routes/admissionRoutes");
-const clinicalNoteRoutes = require("./routes/clinicalNoteRoutes");
-const patientHistoryRoutes = require("./routes/patientHistoryRoutes");
-const pharmacyRoutes = require("./routes/pharmacyRoutes");
-const settingsRoutes = require("./routes/settingsRoutes");
-const notificationRoutes = require("./routes/notificationRoutes");
-const promptRoutes = require("./routes/promptRoutes");
+const routeModules = {
+    authRoutes: require("./routes/authRoutes"),
+    adminRoutes: require("./routes/adminRoutes"),
+    patientRoutes: require("./routes/patientRoutes"),
+    doctorRoutes: require("./routes/doctorRoutes"),
+    appointmentRoutes: require("./routes/appointmentRoutes"),
+    dashboardRoutes: require("./routes/dashboardRoutes"),
+    bedRoutes: require("./routes/bedRoutes"),
+    admissionRoutes: require("./routes/admissionRoutes"),
+    clinicalNoteRoutes: require("./routes/clinicalNoteRoutes"),
+    patientHistoryRoutes: require("./routes/patientHistoryRoutes"),
+    pharmacyRoutes: require("./routes/pharmacyRoutes"),
+    settingsRoutes: require("./routes/settingsRoutes"),
+    notificationRoutes: require("./routes/notificationRoutes"),
+    aiRoutes: require("./routes/aiRoutes"),
+    promptRoutes: require("./routes/promptRoutes"),
+};
 
-// JWT Authentication Middleware
-const { verifyToken } = require("./middleware/authMiddleware");
-
-// ========================= INITIALIZE EXPRESS =========================
+const expressRoutes = [
+    ["/api/auth", routeModules.authRoutes],
+    ["/api/admin", routeModules.adminRoutes],
+    ["/api/patients", routeModules.patientRoutes],
+    ["/api/doctors", routeModules.doctorRoutes],
+    ["/api/appointments", routeModules.appointmentRoutes],
+    ["/api/dashboard", routeModules.dashboardRoutes],
+    ["/api/beds", routeModules.bedRoutes],
+    ["/api/admissions", routeModules.admissionRoutes],
+    ["/api/clinical-notes", routeModules.clinicalNoteRoutes],
+    ["/api/patient-history", routeModules.patientHistoryRoutes],
+    ["/api/pharmacy", routeModules.pharmacyRoutes],
+    ["/api/settings", routeModules.settingsRoutes],
+    ["/api/notifications", routeModules.notificationRoutes],
+    ["/api/ai", routeModules.aiRoutes],
+    ["/api/prompts", routeModules.promptRoutes],
+];
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ========================= GLOBAL MIDDLEWARE =========================
-
 app.use(cors());
 app.use(express.json());
 
-// ========================= ROUTES =========================
+// Validate and mount routers with a useful error message.
+for (const [path, router] of expressRoutes) {
+    if (typeof router !== "function") {
+        throw new TypeError(
+            `Invalid Express router for ${path}. ` +
+            `Check the corresponding routes file and its module.exports.`
+        );
+    }
 
-app.use("/api/auth", authRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/patients", patientRoutes);
-app.use("/api/doctors", doctorRoutes);
-app.use("/api/appointments", appointmentRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/beds", bedRoutes);
-app.use("/api/admissions", admissionRoutes);
-app.use("/api/clinical-notes", clinicalNoteRoutes);
-app.use("/api/patient-history", patientHistoryRoutes);
-app.use("/api/pharmacy", pharmacyRoutes);
-app.use("/api/settings", settingsRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/prompts", promptRoutes);
+    app.use(path, router);
+}
 
-// ========================= TEST & HEALTH ROUTES =========================
+const { verifyToken } = require("./middleware/authMiddleware");
 
 app.get("/api/test", (req, res) => {
-  res.json({
-    success: true,
-    message: "Backend is running successfully."
-  });
+    res.json({
+        success: true,
+        message: "Backend is running successfully.",
+    });
 });
 
 app.get("/api/protected", verifyToken, (req, res) => {
-  res.json({
-    success: true,
-    message: "Welcome! You have accessed a protected route.",
-    loggedInUser: req.user
-  });
+    res.json({
+        success: true,
+        message: "Welcome! You have accessed a protected route.",
+        loggedInUser: req.user,
+    });
 });
 
-// ========================= START SERVER =========================
-
 app.listen(PORT, () => {
-  console.log(`[Server]: Running successfully at http://localhost:${PORT}`);
+    console.log(`[Server]: Running successfully at http://localhost:${PORT}`);
 });

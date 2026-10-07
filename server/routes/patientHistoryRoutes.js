@@ -1,79 +1,45 @@
-// ==========================================================
-// PATIENT HISTORY ROUTES
-// ==========================================================
-
 const express = require("express");
-
 const router = express.Router();
 
+const auth = require("../middleware/authMiddleware");
+const controller = require("../controllers/patientHistoryController");
 
-// ==========================================================
-// AUTH MIDDLEWARE
-// ==========================================================
+if (typeof auth.verifyToken !== "function") {
+    throw new Error(
+        "patientHistoryRoutes: verifyToken is not exported by authMiddleware.js"
+    );
+}
 
-const {
+if (typeof auth.authorizeRoles !== "function") {
+    throw new Error(
+        "patientHistoryRoutes: authorizeRoles is not exported by authMiddleware.js"
+    );
+}
 
-    verifyToken,
-    authorizeRoles
+if (typeof controller.getPatientMedicalHistory !== "function") {
+    throw new Error(
+        "patientHistoryRoutes: getPatientMedicalHistory is not exported by patientHistoryController.js"
+    );
+}
 
-} = require("../middleware/authMiddleware");
-
-
-// ==========================================================
-// CONTROLLER
-// ==========================================================
-
-const {
-
-    getPatientMedicalHistory,
-    getPatientStayHistory,
-
-
-} = require("../controllers/patientHistoryController");
-
-
-// ==========================================================
-// GET PATIENT MEDICAL HISTORY
-// ==========================================================
+if (typeof controller.getPatientStayHistory !== "function") {
+    throw new Error(
+        "patientHistoryRoutes: getPatientStayHistory is not exported by patientHistoryController.js"
+    );
+}
 
 router.get(
-
     "/patient/:patientId",
-
-    verifyToken,
-
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
-
-    getPatientMedicalHistory
-
+    auth.verifyToken,
+    auth.authorizeRoles("admin", "doctor", "staff"),
+    controller.getPatientMedicalHistory
 );
-
-// ==========================================================
-// GET PATIENT STAY HISTORY
-// ==========================================================
 
 router.get(
-
     "/patient/:patientId/stays",
-
-    verifyToken,
-
-    authorizeRoles(
-        "admin",
-        "doctor",
-        "staff"
-    ),
-
-    getPatientStayHistory
-
+    auth.verifyToken,
+    auth.authorizeRoles("admin", "doctor", "staff"),
+    controller.getPatientStayHistory
 );
-
-// ==========================================================
-// EXPORT
-// ==========================================================
 
 module.exports = router;

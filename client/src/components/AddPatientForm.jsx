@@ -22,6 +22,12 @@ function AddPatientForm({ onPatientAdded }) {
   const [doctors, setDoctors] = useState([]);
   const [isLoadingDoctors, setIsLoadingDoctors] = useState(false);
 
+  // Bed & Ward selection state
+  const [availableBeds, setAvailableBeds] = useState([]);
+  const [wardsList, setWardsList] = useState([]);
+  const [bedsInSelectedWard, setBedsInSelectedWard] = useState([]);
+  const [isLoadingBeds, setIsLoadingBeds] = useState(false);
+
   const [patientData, setPatientData] = useState({
     patientName: "",
     age: "",
@@ -92,6 +98,59 @@ function AddPatientForm({ onPatientAdded }) {
   }, []);
 
   // ======================================================
+  // FETCH AVAILABLE BEDS & WARDS
+  // ======================================================
+
+  useEffect(() => {
+    const fetchBeds = async () => {
+      setIsLoadingBeds(true);
+      try {
+        const response = await api.get("/beds");
+        const allBeds = response.data?.beds || response.data || [];
+
+        // Filter only available beds
+        const freeBeds = allBeds.filter(
+          (bed) => String(bed.status).toLowerCase() === "available"
+        );
+        setAvailableBeds(freeBeds);
+
+        // Extract unique wards from available beds
+        const uniqueWards = [
+          ...new Set(freeBeds.map((bed) => bed.ward).filter(Boolean))
+        ];
+        setWardsList(uniqueWards);
+      } catch (error) {
+        console.error("Failed to fetch beds list:", error);
+      } finally {
+        setIsLoadingBeds(false);
+      }
+    };
+
+    fetchBeds();
+  }, []);
+
+  // ======================================================
+  // HANDLE WARD CHANGE (Updates bed dropdown)
+  // ======================================================
+
+  const handleWardChange = (event) => {
+    const selectedWard = event.target.value;
+
+    setPatientData((previousData) => ({
+      ...previousData,
+      ward: selectedWard,
+      bedNumber: "" // Reset bed selection when ward changes
+    }));
+
+    if (selectedWard) {
+      const filtered = availableBeds.filter((bed) => bed.ward === selectedWard);
+      setBedsInSelectedWard(filtered);
+    } else {
+      setBedsInSelectedWard([]);
+    }
+  };
+
+  // ======================================================
   // HANDLE INPUT CHANGE
   // ======================================================
 
@@ -116,8 +175,25 @@ function AddPatientForm({ onPatientAdded }) {
       return;
     }
 
+    // Format payload to match backend expectations (snake_case)
+    const payload = {
+      patient_name: patientData.patientName,
+      age: Number(patientData.age),
+      gender: patientData.gender,
+      blood_group: patientData.bloodGroup || null,
+      phone: patientData.phone || null,
+      address: patientData.address || null,
+      emergency_contact: patientData.emergencyContact || null,
+      doctor: patientData.doctor || null,
+      diagnosis: patientData.diagnosis || null,
+      // Optional admission details
+      ward: patientData.ward || null,
+      bed_number: patientData.bedNumber || null,
+      admission_date: patientData.admissionDate || null,
+    };
+
     try {
-      const response = await api.post("/patients", patientData);
+      const response = await api.post("/patients", payload);
 
       console.log("Patient added successfully:", response.data);
       alert("Patient added successfully!");
@@ -138,6 +214,8 @@ function AddPatientForm({ onPatientAdded }) {
         admissionDate: ""
       });
 
+      setBedsInSelectedWard([]);
+
       if (onPatientAdded) {
         onPatientAdded();
       }
@@ -157,7 +235,7 @@ function AddPatientForm({ onPatientAdded }) {
         return;
       }
 
-      alert(error.response?.data?.error || "Failed to add patient.");
+      alert(error.response?.data?.message || error.response?.data?.error || "Failed to add patient.");
     }
   };
 
@@ -425,17 +503,16 @@ function AddPatientForm({ onPatientAdded }) {
             </div>
           </div>
 
-          {/* ADMISSION DATE */}
+          {/* ADMISSION DATE (OPTIONAL) */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-              Admission Date <span className="text-red-500">*</span>
+              Admission Date <span className="text-slate-400 font-normal">(Optional)</span>
             </label>
             <input
               type="date"
               name="admissionDate"
               value={patientData.admissionDate}
               onChange={handleInputChange}
-              required
               className="
                 w-full h-10 rounded-xl border border-slate-300 bg-white
                 px-3.5 text-xs sm:text-sm text-slate-800 outline-none
@@ -444,42 +521,88 @@ function AddPatientForm({ onPatientAdded }) {
             />
           </div>
 
-          {/* WARD */}
+          {/* WARD DROPDOWN */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-slate-700">
               Ward
             </label>
-            <input
-              type="text"
-              name="ward"
-              placeholder="e.g. ICU, General Ward A"
-              value={patientData.ward}
-              onChange={handleInputChange}
-              className="
-                w-full h-10 rounded-xl border border-slate-300 bg-white
-                px-3.5 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none
-                transition-all duration-150 focus:border-[#08679F] focus:ring-4 focus:ring-[#08679F]/10
-              "
-            />
+            <div className="relative">
+              <select
+                name="ward"
+                value={patientData.ward}
+                onChange={handleWardChange}
+                disabled={isLoadingBeds}
+                className="
+                  w-full h-10 rounded-xl border border-slate-300 bg-white
+                  py-2 pl-3.5 pr-10 text-xs sm:text-sm text-slate-800 outline-none
+                  transition-all duration-150 appearance-none cursor-pointer
+                  focus:border-[#08679F] focus:ring-4 focus:ring-[#08679F]/10
+                  disabled:bg-slate-100 disabled:text-slate-400
+                "
+              >
+                <option value="">
+                  {isLoadingBeds ? "Loading Wards..." : "Select Ward"}
+                </option>
+                {wardsList.map((ward) => (
+                  <option key={ward} value={ward}>
+                    {ward}
+                  </option>
+                ))}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
           </div>
 
-          {/* BED NUMBER */}
+          {/* BED NUMBER DROPDOWN */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-slate-700">
               Bed Number
             </label>
-            <input
-              type="text"
-              name="bedNumber"
-              placeholder="e.g. B-102"
-              value={patientData.bedNumber}
-              onChange={handleInputChange}
-              className="
-                w-full h-10 rounded-xl border border-slate-300 bg-white
-                px-3.5 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none
-                transition-all duration-150 focus:border-[#08679F] focus:ring-4 focus:ring-[#08679F]/10
-              "
-            />
+            <div className="relative">
+              <select
+                name="bedNumber"
+                value={patientData.bedNumber}
+                onChange={handleInputChange}
+                disabled={!patientData.ward || isLoadingBeds}
+                className="
+                  w-full h-10 rounded-xl border border-slate-300 bg-white
+                  py-2 pl-3.5 pr-10 text-xs sm:text-sm text-slate-800 outline-none
+                  transition-all duration-150 appearance-none cursor-pointer
+                  focus:border-[#08679F] focus:ring-4 focus:ring-[#08679F]/10
+                  disabled:bg-slate-100 disabled:text-slate-400
+                "
+              >
+                <option value="">
+                  {!patientData.ward
+                    ? "Select Ward First"
+                    : bedsInSelectedWard.length === 0
+                    ? "No Available Beds"
+                    : "Select Bed"}
+                </option>
+                {bedsInSelectedWard.map((bed) => (
+                  <option key={bed.id} value={bed.bed_number}>
+                    {bed.bed_number} {bed.bed_type ? `(${bed.bed_type})` : ""}
+                  </option>
+                ))}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
           </div>
 
           {/* DIAGNOSIS */}

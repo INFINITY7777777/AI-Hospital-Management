@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import axios from "axios";
+import api from "../services/api";
 import { useNavigate, Link } from "react-router-dom";
 
 function Admissions() {
@@ -22,7 +22,7 @@ function Admissions() {
       setError("");
       const token = localStorage.getItem("token");
 
-      const response = await axios.get("http://localhost:5000/api/admissions", {
+      const response = await api.get("/admissions", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -92,8 +92,8 @@ function Admissions() {
     try {
       const token = localStorage.getItem("token");
 
-      await axios.delete(
-        `http://localhost:5000/api/admissions/${admission.id}`,
+      await api.delete(
+        `/admissions/${admission.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

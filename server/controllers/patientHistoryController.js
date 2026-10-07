@@ -1,335 +1,235 @@
-// ==========================================================
-// PATIENT HISTORY CONTROLLER
-// Handles complete medical history of a patient
-// ==========================================================
 
-// ==========================================================
-// DATABASE CONNECTION
-// ==========================================================
+// server/controllers/patientHistoryController.js
 
-const db = require("../config/db");
+const pool = require("../config/db");
 
-// ==========================================================
+const isValidId = (id) =>
+    id !== undefined &&
+    id !== null &&
+    /^\d+$/.test(String(id)) &&
+    Number(id) > 0;
+
+const getRole = (req) =>
+    String(req.user?.role || "").toLowerCase();
+
+const getUserId = (req) =>
+    req.user?.id ?? req.user?.userId ?? req.user?.user_id ?? null;
+
+// Uses the same patient-to-doctor matching approach as the
+// patient and bed controllers.
+const doctorPatientCondition = `
+    (
+        LOWER(TRIM(COALESCE(p.doctor, ''))) =
+            LOWER(TRIM(COALESCE(u.full_name, '')))
+        OR LOWER(TRIM(COALESCE(p.doctor, ''))) =
+            LOWER(TRIM(COALESCE(u.name, '')))
+        OR p.doctor = u.id::text
+        OR EXISTS (
+            SELECT 1
+            FROM doctors d
+            JOIN users du ON du.id = d.user_id
+            WHERE du.id = u.id
+              AND (
+                  LOWER(TRIM(COALESCE(p.doctor, ''))) =
+                      LOWER(TRIM(COALESCE(d.doctor_name, '')))
+                  OR p.doctor = d.id::text
+              )
+        )
+    )
+`;
+
+async function getAuthorizedPatient(client, req, patientId) {
+    const role = getRole(req);
+    const userId = getUserId(req);
+
+    if (role === "doctor") {
+        if (!isValidId(userId)) {
+            return { forbidden: true };
+        }
+
+        const result = await client.query(
+            `SELECT p.id, p.patient_name
+             FROM patients p
+             JOIN users u ON u.id = $2
+             WHERE p.id = $1
+               AND ${doctorPatientCondition}`,
+            [Number(patientId), Number(userId)]
+        );
+
+        return result.rows.length
+            ? { patient: result.rows[0] }
+            : { notFound: true };
+    }
+
+    const result = await client.query(
+        `SELECT id, patient_name
+         FROM patients
+         WHERE id = $1`,
+        [Number(patientId)]
+    );
+
+    return result.rows.length
+        ? { patient: result.rows[0] }
+        : { notFound: true };
+}
+
+// --------------------------------------------------
 // GET PATIENT MEDICAL HISTORY
-// ==========================================================
+// --------------------------------------------------
 
 const getPatientMedicalHistory = async (req, res) => {
+    const { patientId } = req.params;
+
+    if (!isValidId(patientId)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid patient ID.",
+        });
+    }
+
+    const client = await pool.connect();
 
     try {
-
-        // ======================================================
-        // GET PATIENT ID
-        // ======================================================
-
-        const { patientId } = req.params;
-
-
-        // ======================================================
-        // CHECK PATIENT EXISTS
-        // ======================================================
-
-        const patientResult = await db.query(
-
-            `
-            SELECT
-                id,
-                patient_name
-            FROM patients
-            WHERE id = $1
-            `,
-
-            [patientId]
-
+        const access = await getAuthorizedPatient(
+            client,
+            req,
+            patientId
         );
 
-
-        // ======================================================
-        // PATIENT NOT FOUND
-        // ======================================================
-
-        if (patientResult.rows.length === 0) {
-
-            return res.status(404).json({
-
-                error: "Patient not found"
-
+        if (access.forbidden) {
+            return res.status(403).json({
+                success: false,
+                message: "Doctor account could not be verified.",
             });
-
         }
 
+        if (access.notFound) {
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found or access denied.",
+            });
+        }
 
-        // ======================================================
-        // GET ADMISSION HISTORY
-        // ======================================================
+        const [admissions, appointments, clinicalNotes] =
+            await Promise.all([
+                client.query(
+                    `SELECT a.*, b.bed_number, b.ward
+                     FROM admissions a
+                     LEFT JOIN beds b ON b.id = a.bed_id
+                     WHERE a.patient_id = $1
+                     ORDER BY a.admission_date DESC NULLS LAST, a.id DESC`,
+                    [Number(patientId)]
+                ),
 
-        const admissionsResult = await db.query(
+                client.query(
+                    `SELECT *
+                     FROM appointments
+                     WHERE patient_id = $1
+                     ORDER BY appointment_date DESC NULLS LAST`,
+                    [Number(patientId)]
+                ),
 
-            `
-            SELECT
+                client.query(
+                    `SELECT *
+                     FROM clinical_notes
+                     WHERE patient_id = $1
+                     ORDER BY id DESC`,
+                    [Number(patientId)]
+                ),
+            ]);
 
-                id,
-                patient_id,
-                bed_id,
-                admission_date,
-                admission_reason,
-                diagnosis,
-                status,
-                discharge_date,
-                discharge_reason,
-                created_at,
-                updated_at
-
-            FROM admissions
-
-            WHERE patient_id = $1
-
-            ORDER BY admission_date DESC, id DESC
-            `,
-
-            [patientId]
-
+        const activeAdmissions = admissions.rows.filter(
+            (item) => String(item.status || "").toLowerCase() === "admitted"
         );
-
-
-        // ======================================================
-        // GET APPOINTMENT HISTORY
-        // ======================================================
-
-        const appointmentsResult = await db.query(
-
-            `
-            SELECT
-
-                id,
-                patient_id,
-                doctor_id,
-                appointment_date,
-                appointment_time,
-                reason,
-                status,
-                created_at
-
-            FROM appointments
-
-            WHERE patient_id = $1
-
-            ORDER BY appointment_date DESC, appointment_time DESC, id DESC
-            `,
-
-            [patientId]
-
-        );
-
-
-        // ======================================================
-        // GET CLINICAL NOTES
-        // ======================================================
-
-        const clinicalNotesResult = await db.query(
-
-            `
-            SELECT
-
-                cn.id,
-                cn.patient_id,
-                cn.author_id,
-                cn.note_type,
-                cn.title,
-                cn.content,
-                cn.created_at,
-                cn.updated_at,
-
-                u.full_name AS author_name,
-                u.role AS author_role
-
-            FROM clinical_notes cn
-
-            INNER JOIN users u
-                ON cn.author_id = u.id
-
-            WHERE cn.patient_id = $1
-
-            ORDER BY cn.created_at DESC
-            `,
-
-            [patientId]
-
-        );
-
-
-        // ======================================================
-        // SEND COMPLETE HISTORY
-        // ======================================================
 
         return res.status(200).json({
-
             success: true,
-
-            patient: patientResult.rows[0],
-
-            admissions: admissionsResult.rows,
-
-            appointments: appointmentsResult.rows,
-
-            clinicalNotes: clinicalNotesResult.rows
-
+            patient: access.patient,
+            currentAdmission: activeAdmissions[0] || null,
+            admissions: admissions.rows,
+            appointments: appointments.rows,
+            clinicalNotes: clinicalNotes.rows,
         });
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "[Patient Medical History Error]:",
-            error
-        );
-
+    } catch (error) {
+        console.error("getPatientMedicalHistory:", error.message);
 
         return res.status(500).json({
-
-            error: "Failed to fetch patient medical history"
-
+            success: false,
+            message: "Failed to retrieve patient medical history.",
         });
-
+    } finally {
+        client.release();
     }
-
 };
 
-// ==========================================================
+// --------------------------------------------------
 // GET PATIENT STAY HISTORY
-// GET /api/patient-history/patient/:patientId/stays
-// ==========================================================
+// Read-only: never modifies historical records.
+// --------------------------------------------------
 
 const getPatientStayHistory = async (req, res) => {
+    const { patientId } = req.params;
+
+    if (!isValidId(patientId)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid patient ID.",
+        });
+    }
+
+    const client = await pool.connect();
 
     try {
-
-        // ======================================================
-        // GET PATIENT ID
-        // ======================================================
-
-        const { patientId } = req.params;
-
-
-        // ======================================================
-        // CHECK PATIENT EXISTS
-        // ======================================================
-
-        const patientResult = await db.query(
-
-            `
-            SELECT
-                id,
-                patient_name
-            FROM patients
-            WHERE id = $1
-            `,
-
-            [patientId]
-
+        const access = await getAuthorizedPatient(
+            client,
+            req,
+            patientId
         );
 
-
-        // ======================================================
-        // PATIENT NOT FOUND
-        // ======================================================
-
-        if (patientResult.rows.length === 0) {
-
-            return res.status(404).json({
-
-                error: "Patient not found"
-
+        if (access.forbidden) {
+            return res.status(403).json({
+                success: false,
+                message: "Doctor account could not be verified.",
             });
-
         }
 
+        if (access.notFound) {
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found or access denied.",
+            });
+        }
 
-        // ======================================================
-        // GET STAY HISTORY
-        // ======================================================
-
-        const stayResult = await db.query(
-
-            `
-            SELECT
-
-                psh.id,
-                psh.patient_id,
-                psh.admission_id,
-                psh.bed_id,
-
-                psh.ward,
-                psh.bed_number,
-
-                psh.start_date,
-                psh.end_date,
-
-                psh.status,
-
-                psh.created_at,
-                psh.updated_at
-
-            FROM patient_stay_history psh
-
-            WHERE psh.patient_id = $1
-
-            ORDER BY
-                psh.start_date DESC,
-                psh.id DESC
-            `,
-
-            [patientId]
-
+        const result = await client.query(
+            `SELECT
+                h.*,
+                a.status AS admission_status,
+                a.admission_date
+             FROM patient_stay_history h
+             LEFT JOIN admissions a ON a.id = h.admission_id
+             WHERE h.patient_id = $1
+             ORDER BY h.start_date DESC NULLS LAST, h.id DESC`,
+            [Number(patientId)]
         );
-
-
-        // ======================================================
-        // SUCCESS
-        // ======================================================
 
         return res.status(200).json({
-
             success: true,
-
-            patient: patientResult.rows[0],
-
-            stays: stayResult.rows
-
+            patient: access.patient,
+            stays: result.rows,
         });
-
-    }
-
-    catch (error) {
-
-        console.error(
-
-            "[Patient Stay History Error]:",
-
-            error
-
-        );
-
+    } catch (error) {
+        console.error("getPatientStayHistory:", error.message);
 
         return res.status(500).json({
-
-            error: "Failed to fetch patient stay history"
-
+            success: false,
+            message: "Failed to retrieve patient stay history.",
         });
-
+    } finally {
+        client.release();
     }
-
 };
 
-
-// ==========================================================
-// EXPORT
-// ==========================================================
-
 module.exports = {
-
     getPatientMedicalHistory,
     getPatientStayHistory,
-    
-
 };

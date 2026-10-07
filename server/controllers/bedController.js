@@ -1,362 +1,799 @@
-const db = require("../config/db");
 
-// ==========================================================
+const pool = require("../config/db");
+
+// --------------------------------------------------
+// HELPERS
+// --------------------------------------------------
+
+const isValidId = (id) =>
+    id !== undefined &&
+    id !== null &&
+    /^\d+$/.test(String(id)) &&
+    Number(id) > 0;
+
+const getRole = (req) =>
+    String(req.user?.role || "").toLowerCase();
+
+const getUserId = (req) =>
+    req.user?.id ?? req.user?.userId ?? req.user?.user_id ?? null;
+
+const doctorPatientCondition = (patientAlias = "p", userAlias = "u") => `
+    LOWER(TRIM(COALESCE(${patientAlias}.doctor, ''))) =
+    LOWER(TRIM(COALESCE(${userAlias}.full_name, '')))
+`;
+
+// --------------------------------------------------
 // ADD BED
-// ==========================================================
+// --------------------------------------------------
+
 const addBed = async (req, res) => {
+    const { bed_number, ward, bed_type } = req.body;
+
+    if (!bed_number || !String(bed_number).trim() ||
+        !ward || !String(ward).trim()) {
+        return res.status(400).json({
+            success: false,
+            message: "Bed number and ward are required.",
+        });
+    }
+
     try {
-        const { bedNumber, ward, bedType, status } = req.body;
-
-        if (!bedNumber || !ward) {
-            return res.status(400).json({ error: "Bed number and ward are required" });
-        }
-
-        const result = await db.query(
-            `
-            INSERT INTO beds (bed_number, ward, bed_type, status)
-            VALUES ($1, $2, $3, $4)
-            RETURNING *;
-            `,
-            [bedNumber, ward, bedType || null, status || "Available"]
+        const result = await pool.query(
+            `INSERT INTO beds (bed_number, ward, bed_type, status, patient_id)
+             VALUES ($1, $2, $3, 'Available', NULL)
+             RETURNING *`,
+            [
+                String(bed_number).trim(),
+                String(ward).trim(),
+                bed_type || null,
+            ]
         );
 
         return res.status(201).json({
-            message: "Bed added successfully",
-            bed: result.rows[0]
+            success: true,
+            message: "Bed added successfully.",
+            bed: result.rows[0],
         });
     } catch (error) {
-        console.error("[Add Bed Error]:", error);
-        if (error.code === "23505") {
-            return res.status(400).json({ error: "Bed number already exists" });
-        }
-        return res.status(500).json({ error: "Failed to add bed" });
+        console.error("addBed:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to add bed.",
+        });
     }
 };
 
-// ==========================================================
-// GET ALL BEDS (Role-filtered Abstraction)
-// ==========================================================
+// --------------------------------------------------
+// GET ALL BEDS
+// Doctors see all available beds and occupied beds
+// assigned to their patients.
+// --------------------------------------------------
+
 const getAllBeds = async (req, res) => {
-    try {
-        const { role, full_name, name } = req.user;
-        const doctorName = full_name || name || "";
+    const role = getRole(req);
+    const userId = getUserId(req);
 
+    try {
         let query = `
-            SELECT 
-                beds.id,
-                beds.bed_number,
-                beds.ward,
-                beds.bed_type,
-                beds.status,
-                beds.patient_id,
-                beds.created_at,
-                patients.patient_name,
-                patients.doctor AS patient_doctor
-            FROM beds
-            LEFT JOIN patients ON beds.patient_id = patients.id
+            SELECT b.*, p.patient_name, p.doctor
+            FROM beds b
+            LEFT JOIN patients p ON p.id = b.patient_id
         `;
-        const queryParams = [];
+        let params = [];
 
-        // For Doctor Role: Show all Available/Maintenance beds OR Occupied beds assigned to their patients
         if (role === "doctor") {
-            query += `
-                WHERE beds.status != 'Occupied' 
-                OR LOWER(patients.doctor) LIKE '%' || LOWER($1) || '%'
-            `;
-            queryParams.push(doctorName);
-        }
-
-        query += ` ORDER BY beds.id ASC;`;
-
-        const result = await db.query(query, queryParams);
-
-        return res.status(200).json({
-            beds: result.rows
-        });
-    } catch (error) {
-        console.error("[Get Beds Error]:", error);
-        return res.status(500).json({ error: "Failed to fetch beds" });
-    }
-};
-
-// ==========================================================
-// GET BED BY ID
-// ==========================================================
-const getBedById = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const result = await db.query(
-            `
-            SELECT 
-                beds.id,
-                beds.bed_number,
-                beds.ward,
-                beds.bed_type,
-                beds.status,
-                beds.patient_id,
-                beds.created_at,
-                patients.patient_name
-            FROM beds
-            LEFT JOIN patients ON beds.patient_id = patients.id
-            WHERE beds.id = $1;
-            `,
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Bed not found" });
-        }
-
-        return res.status(200).json({ bed: result.rows[0] });
-    } catch (error) {
-        console.error("[Get Bed Error]:", error);
-        return res.status(500).json({ error: "Failed to fetch bed" });
-    }
-};
-
-// ==========================================================
-// UPDATE BED
-// ==========================================================
-const updateBed = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { bedNumber, ward, bedType, status } = req.body;
-
-        if (!bedNumber || !ward) {
-            return res.status(400).json({ error: "Bed number and ward are required" });
-        }
-
-        const currentBedResult = await db.query(
-            `SELECT id, status, patient_id FROM beds WHERE id = $1;`,
-            [id]
-        );
-
-        if (currentBedResult.rows.length === 0) {
-            return res.status(404).json({ error: "Bed not found" });
-        }
-
-        const currentBed = currentBedResult.rows[0];
-        const newStatus = status || currentBed.status;
-
-        if (newStatus === "Occupied" && currentBed.status !== "Occupied") {
-            return res.status(400).json({
-                error: "A bed can only become Occupied by assigning a patient"
-            });
-        }
-
-        if (currentBed.status === "Occupied" && newStatus !== "Occupied") {
-            return res.status(400).json({
-                error: "An occupied bed must be released using the Release Bed action"
-            });
-        }
-
-        const result = await db.query(
-            `
-            UPDATE beds
-            SET bed_number = $1, ward = $2, bed_type = $3, status = $4
-            WHERE id = $5
-            RETURNING *;
-            `,
-            [bedNumber, ward, bedType || null, newStatus, id]
-        );
-
-        return res.status(200).json({
-            message: "Bed updated successfully",
-            bed: result.rows[0]
-        });
-    } catch (error) {
-        console.error("[Update Bed Error]:", error);
-        if (error.code === "23505") {
-            return res.status(400).json({ error: "Bed number already exists" });
-        }
-        return res.status(500).json({ error: "Failed to update bed" });
-    }
-};
-
-// ==========================================================
-// DELETE BED
-// ==========================================================
-const deleteBed = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const bedResult = await db.query(
-            `SELECT id, bed_number, status, patient_id FROM beds WHERE id = $1;`,
-            [id]
-        );
-
-        if (bedResult.rows.length === 0) {
-            return res.status(404).json({ error: "Bed not found" });
-        }
-
-        if (bedResult.rows[0].status === "Occupied") {
-            return res.status(400).json({
-                error: "Occupied beds cannot be deleted. Release the bed first."
-            });
-        }
-
-        const result = await db.query(
-            `DELETE FROM beds WHERE id = $1 RETURNING *;`,
-            [id]
-        );
-
-        return res.status(200).json({
-            message: "Bed deleted successfully",
-            bed: result.rows[0]
-        });
-    } catch (error) {
-        console.error("[Delete Bed Error]:", error);
-        return res.status(500).json({ error: "Failed to delete bed" });
-    }
-};
-
-// ==========================================================
-// ASSIGN BED
-// ==========================================================
-const assignBed = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { patientId } = req.body;
-
-        if (!patientId) {
-            return res.status(400).json({ error: "Patient ID is required" });
-        }
-
-        const patientResult = await db.query(
-            `SELECT id, patient_name FROM patients WHERE id = $1;`,
-            [patientId]
-        );
-
-        if (patientResult.rows.length === 0) {
-            return res.status(404).json({ error: "Patient not found" });
-        }
-
-        const bedResult = await db.query(`SELECT * FROM beds WHERE id = $1;`, [id]);
-
-        if (bedResult.rows.length === 0) {
-            return res.status(404).json({ error: "Bed not found" });
-        }
-
-        const bed = bedResult.rows[0];
-
-        if (bed.status !== "Available") {
-            return res.status(400).json({ error: "Bed is not available for assignment" });
-        }
-
-        const existingBedResult = await db.query(
-            `SELECT id, bed_number FROM beds WHERE patient_id = $1 AND status = 'Occupied' LIMIT 1;`,
-            [patientId]
-        );
-
-        if (existingBedResult.rows.length > 0) {
-            return res.status(400).json({ error: "Patient already has another bed assigned" });
-        }
-
-        const admissionResult = await db.query(
-            `
-            SELECT id, bed_id, status 
-            FROM admissions 
-            WHERE patient_id = $1 AND status = 'Admitted' 
-            ORDER BY created_at DESC LIMIT 1;
-            `,
-            [patientId]
-        );
-
-        const result = await db.query(
-            `
-            UPDATE beds
-            SET patient_id = $1, status = 'Occupied'
-            WHERE id = $2
-            RETURNING *;
-            `,
-            [patientId, id]
-        );
-
-        if (admissionResult.rows.length > 0) {
-            const admission = admissionResult.rows[0];
-
-            if (admission.bed_id && admission.bed_id !== Number(id)) {
-                await db.query(
-                    `UPDATE beds SET patient_id = NULL, status = 'Available' WHERE id = $1;`,
-                    [id]
-                );
-
-                return res.status(400).json({
-                    error: "Patient's active admission already has another bed assigned"
+            if (!isValidId(userId)) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Doctor account could not be verified.",
                 });
             }
 
-            await db.query(
-                `
-                UPDATE admissions 
-                SET bed_id = $1, updated_at = CURRENT_TIMESTAMP 
-                WHERE id = $2;
-                `,
-                [id, admission.id]
-            );
+            query += `
+                JOIN users u ON u.id = $1
+                WHERE (
+                    (
+                        LOWER(COALESCE(b.status, '')) = 'available'
+                        AND b.patient_id IS NULL
+                    )
+                    OR (
+                        LOWER(COALESCE(b.status, '')) = 'occupied'
+                        AND b.patient_id IS NOT NULL
+                        AND ${doctorPatientCondition("p", "u")}
+                    )
+                )
+            `;
+            params = [Number(userId)];
         }
 
+        query += ` ORDER BY b.id ASC`;
+
+        const result = await pool.query(query, params);
+
         return res.status(200).json({
-            message: "Bed assigned successfully",
-            bed: result.rows[0]
+            success: true,
+            beds: result.rows,
         });
     } catch (error) {
-        console.error("[Assign Bed Error]:", error);
-        return res.status(500).json({ error: "Failed to assign bed" });
+        console.error("getAllBeds:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to retrieve beds.",
+        });
     }
 };
 
-// ==========================================================
-// RELEASE BED
-// ==========================================================
-const releaseBed = async (req, res) => {
-    try {
-        const { id } = req.params;
+// --------------------------------------------------
+// GET BED BY ID
+// --------------------------------------------------
 
-        const bedResult = await db.query(
-            `SELECT id, bed_number, patient_id, status FROM beds WHERE id = $1;`,
-            [id]
+const getBedById = async (req, res) => {
+    const { id } = req.params;
+    const role = getRole(req);
+    const userId = getUserId(req);
+
+    if (!isValidId(id)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid bed ID.",
+        });
+    }
+
+    try {
+        let query = `
+            SELECT b.*, p.patient_name, p.doctor
+            FROM beds b
+            LEFT JOIN patients p ON p.id = b.patient_id
+            WHERE b.id = $1
+        `;
+        let params = [Number(id)];
+
+        if (role === "doctor") {
+            if (!isValidId(userId)) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Doctor account could not be verified.",
+                });
+            }
+
+            query = `
+                SELECT b.*, p.patient_name, p.doctor
+                FROM beds b
+                LEFT JOIN patients p ON p.id = b.patient_id
+                JOIN users u ON u.id = $2
+                WHERE b.id = $1
+                  AND (
+                    (
+                        LOWER(COALESCE(b.status, '')) = 'available'
+                        AND b.patient_id IS NULL
+                    )
+                    OR (
+                        LOWER(COALESCE(b.status, '')) = 'occupied'
+                        AND b.patient_id IS NOT NULL
+                        AND ${doctorPatientCondition("p", "u")}
+                    )
+                  )
+            `;
+            params = [Number(id), Number(userId)];
+        }
+
+        const result = await pool.query(query, params);
+
+        if (!result.rows.length) {
+            return res.status(404).json({
+                success: false,
+                message: "Bed not found or access denied.",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            bed: result.rows[0],
+        });
+    } catch (error) {
+        console.error("getBedById:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to retrieve bed.",
+        });
+    }
+};
+
+// --------------------------------------------------
+// UPDATE BED DETAILS
+// Occupied beds cannot be edited.
+// --------------------------------------------------
+
+const updateBed = async (req, res) => {
+    const { id } = req.params;
+    const { bed_number, ward, bed_type } = req.body;
+
+    if (!isValidId(id)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid bed ID.",
+        });
+    }
+
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        const existing = await client.query(
+            "SELECT * FROM beds WHERE id = $1 FOR UPDATE",
+            [Number(id)]
         );
 
-        if (bedResult.rows.length === 0) {
-            return res.status(404).json({ error: "Bed not found" });
+        if (!existing.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({
+                success: false,
+                message: "Bed not found.",
+            });
+        }
+
+        const bed = existing.rows[0];
+
+        if (
+            String(bed.status).toLowerCase() === "occupied" ||
+            bed.patient_id !== null
+        ) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                success: false,
+                message: "Occupied or assigned beds cannot be edited.",
+            });
+        }
+
+        const result = await client.query(
+            `UPDATE beds
+             SET bed_number = $1,
+                 ward = $2,
+                 bed_type = $3
+             WHERE id = $4
+             RETURNING *`,
+            [
+                bed_number === undefined ? bed.bed_number : bed_number,
+                ward === undefined ? bed.ward : ward,
+                bed_type === undefined ? bed.bed_type : bed_type,
+                Number(id),
+            ]
+        );
+
+        await client.query("COMMIT");
+
+        return res.status(200).json({
+            success: true,
+            message: "Bed updated successfully.",
+            bed: result.rows[0],
+        });
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("updateBed:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update bed.",
+        });
+    } finally {
+        client.release();
+    }
+};
+
+// --------------------------------------------------
+// DELETE BED
+// Historical references prevent deletion.
+// --------------------------------------------------
+
+const deleteBed = async (req, res) => {
+    const { id } = req.params;
+
+    if (!isValidId(id)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid bed ID.",
+        });
+    }
+
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        const existing = await client.query(
+            "SELECT * FROM beds WHERE id = $1 FOR UPDATE",
+            [Number(id)]
+        );
+
+        if (!existing.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({
+                success: false,
+                message: "Bed not found.",
+            });
+        }
+
+        const bed = existing.rows[0];
+
+        if (
+            String(bed.status).toLowerCase() === "occupied" ||
+            bed.patient_id !== null
+        ) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                success: false,
+                message: "An occupied or assigned bed cannot be deleted.",
+            });
+        }
+
+        const history = await client.query(
+            "SELECT id FROM patient_stay_history WHERE bed_id = $1 LIMIT 1",
+            [Number(id)]
+        );
+
+        if (history.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                success: false,
+                message: "This bed has historical stay records and cannot be deleted.",
+            });
+        }
+
+        const admissions = await client.query(
+            "SELECT id FROM admissions WHERE bed_id = $1 LIMIT 1",
+            [Number(id)]
+        );
+
+        if (admissions.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                success: false,
+                message: "This bed is referenced by admission records and cannot be deleted.",
+            });
+        }
+
+        await client.query("DELETE FROM beds WHERE id = $1", [
+            Number(id),
+        ]);
+
+        await client.query("COMMIT");
+
+        return res.status(200).json({
+            success: true,
+            message: "Bed deleted successfully.",
+        });
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("deleteBed:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete bed.",
+        });
+    } finally {
+        client.release();
+    }
+};
+
+// --------------------------------------------------
+// ASSIGN BED TO AN ACTIVE ADMISSION
+// --------------------------------------------------
+
+const assignBed = async (req, res) => {
+    const { patient_id, bed_id } = req.body;
+
+    if (!isValidId(patient_id) || !isValidId(bed_id)) {
+        return res.status(400).json({
+            success: false,
+            message: "Valid patient_id and bed_id are required.",
+        });
+    }
+
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        const patientResult = await client.query(
+            "SELECT id FROM patients WHERE id = $1 FOR UPDATE",
+            [Number(patient_id)]
+        );
+
+        if (!patientResult.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found.",
+            });
+        }
+
+        // Do not silently reconcile a bed that is already marked
+        // occupied without a matching active admission.
+        const existingOccupiedBed = await client.query(
+            `SELECT id
+             FROM beds
+             WHERE patient_id = $1
+               AND LOWER(COALESCE(status, '')) = 'occupied'
+             LIMIT 1`,
+            [Number(patient_id)]
+        );
+
+        if (existingOccupiedBed.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                success: false,
+                message: "This patient already has an occupied bed. Reconcile that record before assigning another bed.",
+            });
+        }
+
+        const admissionResult = await client.query(
+            `SELECT *
+             FROM admissions
+             WHERE patient_id = $1
+               AND LOWER(COALESCE(status, '')) = 'admitted'
+             FOR UPDATE`,
+            [Number(patient_id)]
+        );
+
+        if (admissionResult.rows.length !== 1) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                success: false,
+                message: "Exactly one active admission is required to assign a bed.",
+            });
+        }
+
+        const admission = admissionResult.rows[0];
+
+        if (admission.bed_id !== null) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                success: false,
+                message: "This admission already has a bed assigned.",
+            });
+        }
+
+        const bedResult = await client.query(
+            "SELECT * FROM beds WHERE id = $1 FOR UPDATE",
+            [Number(bed_id)]
+        );
+
+        if (!bedResult.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({
+                success: false,
+                message: "Bed not found.",
+            });
         }
 
         const bed = bedResult.rows[0];
 
-        if (bed.status !== "Occupied") {
-            return res.status(400).json({ error: "Bed is not currently occupied" });
+        if (
+            String(bed.status).toLowerCase() !== "available" ||
+            bed.patient_id !== null
+        ) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                success: false,
+                message: "Selected bed is not available.",
+            });
         }
 
-        const result = await db.query(
-            `
-            UPDATE beds
-            SET patient_id = NULL, status = 'Available'
-            WHERE id = $1
-            RETURNING *;
-            `,
-            [id]
+        const activeStay = await client.query(
+            `SELECT id
+             FROM patient_stay_history
+             WHERE admission_id = $1
+               AND LOWER(COALESCE(status, '')) = 'active'
+             LIMIT 1`,
+            [admission.id]
         );
 
-        if (bed.patient_id) {
-            await db.query(
-                `
-                UPDATE admissions
-                SET bed_id = NULL, updated_at = CURRENT_TIMESTAMP
-                WHERE patient_id = $1 AND status = 'Admitted' AND bed_id = $2;
-                `,
-                [bed.patient_id, id]
-            );
+        if (activeStay.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                success: false,
+                message: "An active stay already exists for this admission.",
+            });
         }
 
+        await client.query(
+            `UPDATE beds
+             SET status = 'Occupied', patient_id = $1
+             WHERE id = $2`,
+            [Number(patient_id), Number(bed_id)]
+        );
+
+        await client.query(
+            "UPDATE admissions SET bed_id = $1 WHERE id = $2",
+            [Number(bed_id), admission.id]
+        );
+
+        await client.query(
+            `INSERT INTO patient_stay_history (
+                patient_id, admission_id, bed_id,
+                ward, bed_number, start_date, status
+            )
+            VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, 'Active')`,
+            [
+                Number(patient_id),
+                admission.id,
+                Number(bed_id),
+                bed.ward,
+                bed.bed_number,
+            ]
+        );
+
+        await client.query("COMMIT");
+
         return res.status(200).json({
-            message: "Bed released successfully",
-            bed: result.rows[0]
+            success: true,
+            message: "Bed assigned successfully.",
         });
     } catch (error) {
-        console.error("[Release Bed Error]:", error);
-        return res.status(500).json({ error: "Failed to release bed" });
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("assignBed:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to assign bed.",
+        });
+    } finally {
+        client.release();
+    }
+};
+
+// --------------------------------------------------
+// RELEASE BED
+// Admission stays active; its bed assignment is cleared.
+// --------------------------------------------------
+
+
+const releaseBed = async (req, res) => {
+    const { id } = req.params;
+
+    if (!isValidId(id)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid bed ID.",
+        });
+    }
+
+    let client;
+    let transactionStarted = false;
+
+    try {
+        client = await pool.connect();
+        await client.query("BEGIN");
+        transactionStarted = true;
+
+        // Lock the bed first so simultaneous release/assignment requests
+        // cannot modify this bed concurrently.
+        const bedResult = await client.query(
+            "SELECT * FROM beds WHERE id = $1 FOR UPDATE",
+            [Number(id)]
+        );
+
+        if (bedResult.rows.length !== 1) {
+            await client.query("ROLLBACK");
+            transactionStarted = false;
+
+            return res.status(404).json({
+                success: false,
+                message: "Bed not found.",
+            });
+        }
+
+        const bed = bedResult.rows[0];
+
+        if (
+            String(bed.status).toLowerCase() !== "occupied" ||
+            bed.patient_id === null
+        ) {
+            await client.query("ROLLBACK");
+            transactionStarted = false;
+
+            return res.status(409).json({
+                success: false,
+                message: "Bed is not occupied or has no assigned patient.",
+            });
+        }
+
+        const patientId = Number(bed.patient_id);
+
+        // Ensure the assigned patient still exists.
+        const patientResult = await client.query(
+            "SELECT id FROM patients WHERE id = $1 FOR UPDATE",
+            [patientId]
+        );
+
+        if (patientResult.rows.length !== 1) {
+            await client.query("ROLLBACK");
+            transactionStarted = false;
+
+            return res.status(409).json({
+                success: false,
+                message: "The assigned patient does not exist. No records were changed.",
+            });
+        }
+
+        // Find every active admission for this patient.
+        // Do not guess if the database contains multiple active admissions.
+        const admissionResult = await client.query(
+            `SELECT id, patient_id, bed_id, status
+             FROM admissions
+             WHERE patient_id = $1
+               AND LOWER(TRIM(COALESCE(status, ''))) = 'admitted'
+             FOR UPDATE`,
+            [patientId]
+        );
+
+        const activeAdmissions = admissionResult.rows;
+
+        if (activeAdmissions.length > 1) {
+            await client.query("ROLLBACK");
+            transactionStarted = false;
+
+            return res.status(409).json({
+                success: false,
+                message: "Multiple active admissions exist for this patient. Resolve the conflicting admissions before releasing the bed.",
+            });
+        }
+
+        let admission = activeAdmissions[0] || null;
+        let activeStays = [];
+
+        if (admission) {
+            // An active admission assigned to a different bed is a conflict.
+            if (
+                admission.bed_id !== null &&
+                Number(admission.bed_id) !== Number(id)
+            ) {
+                await client.query("ROLLBACK");
+                transactionStarted = false;
+
+                return res.status(409).json({
+                    success: false,
+                    message: "The patient's active admission references a different bed. No records were changed.",
+                });
+            }
+
+            const stayResult = await client.query(
+                `SELECT id, patient_id, admission_id, bed_id, start_date
+                 FROM patient_stay_history
+                 WHERE admission_id = $1
+                   AND LOWER(TRIM(COALESCE(status, ''))) = 'active'
+                 FOR UPDATE`,
+                [admission.id]
+            );
+
+            activeStays = stayResult.rows;
+
+            // A matching admission must not have an active stay assigned
+            // to a different bed or patient.
+            const conflictingStay = activeStays.some(
+                (stay) =>
+                    Number(stay.patient_id) !== patientId ||
+                    Number(stay.bed_id) !== Number(id)
+            );
+
+            if (conflictingStay || activeStays.length > 1) {
+                await client.query("ROLLBACK");
+                transactionStarted = false;
+
+                return res.status(409).json({
+                    success: false,
+                    message: "Conflicting active stay-history records exist. No records were changed.",
+                });
+            }
+        } else {
+            // An orphaned occupied bed can be released only if no active
+            // stay-history record claims this bed or patient.
+            const conflictingStays = await client.query(
+                `SELECT id
+                 FROM patient_stay_history
+                 WHERE (
+                     bed_id = $1 OR patient_id = $2
+                 )
+                   AND LOWER(TRIM(COALESCE(status, ''))) = 'active'
+                 FOR UPDATE`,
+                [Number(id), patientId]
+            );
+
+            if (conflictingStays.rows.length > 0) {
+                await client.query("ROLLBACK");
+                transactionStarted = false;
+
+                return res.status(409).json({
+                    success: false,
+                    message: "Active stay history exists without a matching active admission. Reconcile the records before releasing this bed.",
+                });
+            }
+        }
+
+        // Complete the active stay when one exists.
+        if (admission && activeStays.length === 1) {
+            const stay = activeStays[0];
+
+            const stayUpdate = await client.query(
+                `UPDATE patient_stay_history
+                 SET status = 'Completed',
+                     end_date = CURRENT_DATE,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = $1
+                   AND status = 'Active'
+                 RETURNING id`,
+                [stay.id]
+            );
+
+            if (stayUpdate.rows.length !== 1) {
+                throw new Error("Could not complete the active stay-history record.");
+            }
+        }
+
+        // Preserve the active admission, but clear its bed assignment.
+        if (admission && admission.bed_id !== null) {
+            const admissionUpdate = await client.query(
+                `UPDATE admissions
+                 SET bed_id = NULL,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = $1
+                   AND bed_id = $2
+                 RETURNING id`,
+                [admission.id, Number(id)]
+            );
+
+            if (admissionUpdate.rows.length !== 1) {
+                throw new Error("Could not clear the admission's bed assignment.");
+            }
+        }
+
+        // Free the bed only after validating and updating related records.
+        const bedUpdate = await client.query(
+            `UPDATE beds
+             SET status = 'Available',
+                 patient_id = NULL
+             WHERE id = $1
+               AND patient_id = $2
+               AND LOWER(TRIM(COALESCE(status, ''))) = 'occupied'
+             RETURNING id`,
+            [Number(id), patientId]
+        );
+
+        if (bedUpdate.rows.length !== 1) {
+            throw new Error("Bed could not be released because its assignment changed.");
+        }
+
+        await client.query("COMMIT");
+        transactionStarted = false;
+
+        return res.status(200).json({
+            success: true,
+            message: admission
+                ? "Bed released successfully. The admission remains active."
+                : "Bed released successfully. No active admission or active stay history was present.",
+        });
+    } catch (error) {
+        if (client && transactionStarted) {
+            await client.query("ROLLBACK").catch(() => {});
+            transactionStarted = false;
+        }
+
+        console.error("[Release Bed Error]", {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            constraint: error.constraint,
+        });
+
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || "Failed to release bed.",
+        });
+    } finally {
+        if (client) {
+            client.release();
+        }
     }
 };
 
@@ -367,5 +804,5 @@ module.exports = {
     updateBed,
     deleteBed,
     assignBed,
-    releaseBed
+    releaseBed,
 };

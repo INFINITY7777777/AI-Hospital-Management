@@ -1,6 +1,7 @@
+
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 
 function AppointmentList({
   filter = "all",
@@ -9,12 +10,10 @@ function AppointmentList({
 }) {
   const navigate = useNavigate();
 
-  // State Management
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Fetch appointments from API on component mount or trigger change
   useEffect(() => {
     let isMounted = true;
 
@@ -32,14 +31,8 @@ function AppointmentList({
           setError("");
         }
 
-        const response = await axios.get(
-          "http://localhost:5000/api/appointments",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        // The shared API service adds the JWT Authorization header.
+        const response = await api.get("/appointments");
 
         if (isMounted) {
           setAppointments(response.data.appointments || []);
@@ -49,6 +42,8 @@ function AppointmentList({
 
         if (error.response?.status === 401) {
           localStorage.removeItem("token");
+          localStorage.removeItem("user");
+
           navigate("/");
           return;
         }
@@ -67,33 +62,39 @@ function AppointmentList({
 
     loadAppointments();
 
-    // Cleanup logic to prevent state updates on unmounted component
     return () => {
       isMounted = false;
     };
   }, [refreshAppointments, navigate]);
 
-  // Safe helper to convert date string/object to YYYY-MM-DD format using local time
   const toLocalYYYYMMDD = (dateInput) => {
     if (!dateInput) return "";
+
     const d = new Date(dateInput);
+
+    if (Number.isNaN(d.getTime())) return "";
+
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
+
     return `${year}-${month}-${day}`;
   };
 
-  // Format date display as DD/MM/YYYY without timezone skewing
   const formatDateDisplay = (dateInput) => {
     if (!dateInput) return "—";
+
     const d = new Date(dateInput);
+
+    if (Number.isNaN(d.getTime())) return "—";
+
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
+
     return `${day}/${month}/${year}`;
   };
 
-  // Status Badge Rendering based on HMS Master Plan Semantic Colors
   const renderStatusBadge = (status) => {
     const statusLower = (status || "scheduled").toLowerCase();
 
@@ -104,12 +105,14 @@ function AppointmentList({
             Completed
           </span>
         );
+
       case "cancelled":
         return (
           <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700 border border-rose-200/60">
             Cancelled
           </span>
         );
+
       default:
         return (
           <span className="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-[#08679F] border border-sky-200/60">
@@ -119,18 +122,22 @@ function AppointmentList({
     }
   };
 
-  // Filter list by selected segment tab and global search query
   const filteredAppointments = appointments.filter((appt) => {
     const apptDateStr = toLocalYYYYMMDD(appt.appointment_date);
     const todayStr = toLocalYYYYMMDD(new Date());
 
-    // 1. Segment filter logic
     let matchesFilter = true;
-    if (filter === "today") matchesFilter = apptDateStr === todayStr;
-    if (filter === "upcoming") matchesFilter = apptDateStr > todayStr;
 
-    // 2. Search filter logic
+    if (filter === "today") {
+      matchesFilter = apptDateStr === todayStr;
+    }
+
+    if (filter === "upcoming") {
+      matchesFilter = apptDateStr > todayStr;
+    }
+
     const query = searchTerm.toLowerCase().trim();
+
     const matchesSearch =
       !query ||
       appt.patient_name?.toLowerCase().includes(query) ||
@@ -142,18 +149,18 @@ function AppointmentList({
     return matchesFilter && matchesSearch;
   });
 
-  // HMS Standard Skeleton Loader
   if (loading) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="h-5 w-32 bg-slate-100 rounded-md animate-pulse"></div>
-          <div className="h-4 w-20 bg-slate-100 rounded-md animate-pulse"></div>
+          <div className="h-5 w-32 bg-slate-100 rounded-md animate-pulse" />
+          <div className="h-4 w-20 bg-slate-100 rounded-md animate-pulse" />
         </div>
+
         <div className="space-y-3">
-          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse"></div>
-          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse"></div>
-          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse"></div>
+          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse" />
+          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse" />
+          <div className="h-12 bg-slate-100/80 rounded-xl animate-pulse" />
         </div>
       </div>
     );
@@ -161,7 +168,6 @@ function AppointmentList({
 
   return (
     <div className="space-y-5">
-      {/* Header section displaying view summary & match count */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
         <div>
           <h2 className="text-base font-bold text-slate-900 tracking-tight">
@@ -171,6 +177,7 @@ function AppointmentList({
               ? "Upcoming Visits"
               : "Appointments Queue"}
           </h2>
+
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             View scheduled visits and patient appointments.
           </p>
@@ -185,7 +192,6 @@ function AppointmentList({
         </div>
       </div>
 
-      {/* HMS Error Alert */}
       {error && (
         <div className="flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs font-medium text-rose-700">
           <svg
@@ -199,11 +205,11 @@ function AppointmentList({
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
+
           <span>{error}</span>
         </div>
       )}
 
-      {/* HMS Empty State Handler */}
       {filteredAppointments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3">
@@ -221,9 +227,11 @@ function AppointmentList({
               />
             </svg>
           </div>
+
           <h3 className="text-sm font-bold text-slate-800">
             No Appointments Found
           </h3>
+
           <p className="mt-1 text-xs text-slate-500 max-w-sm">
             {searchTerm
               ? `No appointments matching "${searchTerm}".`
@@ -235,7 +243,6 @@ function AppointmentList({
           </p>
         </div>
       ) : (
-        /* Appointment Records Table */
         <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
           <table className="w-full text-left text-xs text-slate-600">
             <thead>
@@ -260,34 +267,41 @@ function AppointmentList({
                   <td className="px-4 py-3.5 font-semibold text-slate-900">
                     {appointment.patient_name || "—"}
                   </td>
+
                   <td className="px-4 py-3.5 text-slate-700 font-medium">
                     {appointment.doctor_name || "—"}
                   </td>
+
                   <td className="px-4 py-3.5 text-slate-600">
                     {appointment.specialization || "—"}
                   </td>
+
                   <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
                     {formatDateDisplay(appointment.appointment_date)}
                   </td>
+
                   <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap font-medium">
                     {appointment.appointment_time || "—"}
                   </td>
+
                   <td className="px-4 py-3.5 text-slate-600 max-w-xs truncate">
                     {appointment.reason || "N/A"}
                   </td>
+
                   <td className="px-4 py-3.5">
                     {renderStatusBadge(appointment.status)}
                   </td>
+
                   <td className="px-4 py-3.5 text-right">
                     <button
-                      onClick={() => navigate(`/appointments/${appointment.id}`)}
-                      className="
-                        inline-flex items-center gap-1.5 h-8 px-3 rounded-lg
-                        bg-slate-100 hover:bg-[#08679F] text-slate-700 hover:text-white
-                        text-xs font-semibold transition-all duration-150 active:scale-[0.98]
-                      "
+                      type="button"
+                      onClick={() =>
+                        navigate(`/appointments/${appointment.id}`)
+                      }
+                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-100 hover:bg-[#08679F] text-slate-700 hover:text-white text-xs font-semibold transition-all duration-150 active:scale-[0.98]"
                     >
                       <span>View</span>
+
                       <svg
                         className="h-3 w-3"
                         viewBox="0 0 24 24"

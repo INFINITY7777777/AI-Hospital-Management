@@ -20,7 +20,7 @@ function InfoItem({ label, value, highlight = false }) {
 }
 
 // ==========================================================
-// FORMAT DATE HELPER
+// FORMAT DATE HELPER (TIMEZONE-SAFE)
 // ==========================================================
 
 const formatDate = (date) => {
@@ -28,7 +28,26 @@ const formatDate = (date) => {
     return "—";
   }
 
-  return new Date(date).toLocaleDateString("en-IN", {
+  // Handle ISO strings, timestamps, or standard YYYY-MM-DD
+  const rawDateStr = String(date).split("T")[0];
+  const parts = rawDateStr.split("-");
+
+  if (parts.length !== 3) {
+    return "—";
+  }
+
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+
+  if (!year || !month || !day) {
+    return "—";
+  }
+
+  // Construct a pure local calendar date
+  const parsedDate = new Date(year, month - 1, day);
+
+  return parsedDate.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric"
@@ -44,11 +63,8 @@ function DigitalPatientCard({ patient }) {
 
   return (
     <div className="bg-white rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] overflow-hidden">
-      {/* ==================================================
-          HEADER HERO BANNER
-      ================================================== */}
+      {/* HEADER HERO BANNER */}
       <div className="bg-[#08679F] text-white p-6 relative overflow-hidden">
-        {/* Subtle Decorative Background Effect */}
         <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/5 pointer-events-none" />
         <div className="absolute right-20 -bottom-10 h-24 w-24 rounded-full bg-white/5 pointer-events-none" />
 
@@ -77,13 +93,9 @@ function DigitalPatientCard({ patient }) {
         </div>
       </div>
 
-      {/* ==================================================
-          CARD BODY
-      ================================================== */}
+      {/* CARD BODY */}
       <div className="p-6 space-y-6">
-        {/* ==================================================
-            PERSONAL INFORMATION
-        ================================================== */}
+        {/* PERSONAL INFORMATION */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <svg className="h-4 w-4 text-[#08679F]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -102,9 +114,7 @@ function DigitalPatientCard({ patient }) {
           </div>
         </section>
 
-        {/* ==================================================
-            CONTACT INFORMATION
-        ================================================== */}
+        {/* CONTACT INFORMATION */}
         <section className="space-y-4 pt-2">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <svg className="h-4 w-4 text-[#08679F]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -121,9 +131,7 @@ function DigitalPatientCard({ patient }) {
           </div>
         </section>
 
-        {/* ==================================================
-            MEDICAL & CLINICAL INFORMATION
-        ================================================== */}
+        {/* MEDICAL & CLINICAL INFORMATION */}
         <section className="space-y-4 pt-2">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <svg className="h-4 w-4 text-[#08679F]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -146,9 +154,7 @@ function DigitalPatientCard({ patient }) {
           </div>
         </section>
 
-        {/* ==================================================
-            FOOTER
-        ================================================== */}
+        {/* FOOTER */}
         <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
           <span>Hospital Management System Verified Record</span>
           <span className="font-medium text-slate-500">Live Sync</span>

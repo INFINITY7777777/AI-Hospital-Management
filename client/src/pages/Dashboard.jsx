@@ -5,7 +5,7 @@
 // ==========================================================
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -71,30 +71,21 @@ function Dashboard() {
       return;
     }
 
-    const axiosConfig = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
 
         const [statsRes, todayRes, bedRes] = await Promise.all([
-          axios.get(
-            "http://localhost:5000/api/dashboard/stats",
-            axiosConfig
+          api.get(
+            "/dashboard/stats",
           ),
 
-          axios.get(
-            "http://localhost:5000/api/dashboard/today-appointments",
-            axiosConfig
+          api.get(
+            "/dashboard/today-appointments",
           ),
 
-          axios.get(
-            "http://localhost:5000/api/dashboard/bed-summary",
-            axiosConfig
+          api.get(
+            "/dashboard/bed-summary",
           ),
         ]);
 
