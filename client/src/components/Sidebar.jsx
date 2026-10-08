@@ -286,7 +286,7 @@ export default function Sidebar() {
                   }`}
                 >
                   <Settings className="h-4 w-4 text-slate-500" />
-                  <span>Hospital Settings</span>
+                  <span>Settings</span>
                 </Link>
 
                 <div className="mt-2.5 rounded-xl border border-emerald-400/10 bg-emerald-400/5 px-3 py-2">

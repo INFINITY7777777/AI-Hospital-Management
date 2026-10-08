@@ -1,7 +1,8 @@
 // ==========================================================
 // DOCTORS PAGE
 // Manages doctor registration and doctor list
-// Integrated with Animated Sidebar
+// Untouched Sidebar component integrated with a circular
+// vertically centered floating menu button via CSS overrides
 // ==========================================================
 
 import { useState } from "react";
@@ -32,20 +33,22 @@ function Doctors() {
   // ==========================================================
 
   return (
-    <div className="relative min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
-      {/* ANIMATED SIDEBAR OVERLAY */}
-      <Sidebar />
+    <div className="relative min-h-screen bg-[#F6F8FC] font-sans antialiased text-slate-900">
+      {/* =====================================================
+          VERTICALLY CENTERED CIRCULAR MENU OVERRIDE CONTAINER
+          Overrides the floating button position & shape without
+          modifying any code inside Sidebar.jsx
+      ====================================================== */}
+      <div className="[&>button]:fixed! [&>button]:top-1/2! [&>button]:left-2! [&>button]:-translate-y-1/2! [&>button]:z-99! [&>button]:h-12! [&>button]:w-12! [&>button]:p-0! [&>button]:justify-center! [&>button]:rounded-full! [&>button]:shadow-xl! [&>button]:bg-[#0b1b32]! [&>button_span]:hidden!">
+        <Sidebar />
+      </div>
 
-      <div className="max-w-7xl mx-auto space-y-6">
-
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         {/* =====================================================
-            TOP ACTION ROW: MENU & BACK TO DASHBOARD ALIGNED
+            BACK TO DASHBOARD
         ====================================================== */}
 
-        <div className="flex items-center gap-3 pt-1 sm:pt-0">
-          {/* Spacer div matching the menu button width so Back button stays neatly next to it */}
-          <div className="w-22 shrink-0" />
-
+        <div>
           <Link
             to="/dashboard"
             className="
@@ -109,7 +112,7 @@ function Doctors() {
         <div className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
           <DoctorList refreshDoctors={refreshDoctors} />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

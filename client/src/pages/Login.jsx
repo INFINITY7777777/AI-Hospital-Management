@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
 import MedicalPlusBackground from "../components/MedicalPlusBackground";
 
@@ -288,7 +288,7 @@ function Login() {
                           htmlFor="mpin"
                           className="text-xs font-semibold text-slate-700"
                         >
-                          4-Digit Security MPIN
+                          4-6 Digit Security MPIN
                         </label>
 
                         <button
@@ -426,8 +426,19 @@ function Login() {
                   </button>
                 </form>
 
+                {/* Register New User Link */}
+                <div className="relative z-10 mt-5 border-t border-slate-100 pt-4 text-center text-xs font-medium text-slate-500">
+                  Need a staff account?{" "}
+                  <Link
+                    to="/register"
+                    className="font-semibold text-[#08679F] transition-colors hover:text-[#07557F]"
+                  >
+                    Register New User
+                  </Link>
+                </div>
+
                 {/* Status footer */}
-                <div className="relative z-10 mt-6 flex items-center justify-center gap-2 text-[11px] font-medium text-slate-400">
+                <div className="relative z-10 mt-5 flex items-center justify-center gap-2 text-[11px] font-medium text-slate-400">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
                   Clinical workspace ready
                 </div>

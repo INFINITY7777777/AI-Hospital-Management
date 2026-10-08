@@ -95,8 +95,8 @@ function EditPatient() {
           address: patient.address || "",
           emergencyContact: patient.emergency_contact || "",
           doctor: patient.doctor || "",
-          ward: patient.ward || "",
-          bedNumber: patient.bed_number || "",
+          ward: patient.ward || patient.current_ward || "",
+          bedNumber: String(patient.bed_number || patient.current_bed_number || ""),
           diagnosis: patient.diagnosis || "",
           admissionDate: formattedAdmissionDate,
         });
@@ -124,9 +124,9 @@ function EditPatient() {
 
   const filteredBeds = patientData.ward
     ? bedsList.filter((bed) => {
-        const isSameWard = bed.ward === patientData.ward;
+        const isSameWard = String(bed.ward).trim() === String(patientData.ward).trim();
         const isAvailable = String(bed.status).toLowerCase() === "available";
-        const isCurrentBed = bed.bed_number === patientData.bedNumber;
+        const isCurrentBed = String(bed.bed_number).trim() === String(patientData.bedNumber).trim();
 
         return isSameWard && (isAvailable || isCurrentBed);
       })
@@ -168,17 +168,22 @@ function EditPatient() {
     try {
       const payload = {
         patient_name: patientData.patientName,
+        patientName: patientData.patientName,
         age: Number(patientData.age),
         gender: patientData.gender,
         blood_group: patientData.bloodGroup,
+        bloodGroup: patientData.bloodGroup,
         phone: patientData.phone,
         address: patientData.address,
         emergency_contact: patientData.emergencyContact,
+        emergencyContact: patientData.emergencyContact,
         doctor: patientData.doctor || null,
         ward: patientData.ward || null,
         bed_number: patientData.bedNumber || null,
+        bedNumber: patientData.bedNumber || null,
         diagnosis: patientData.diagnosis,
         admission_date: patientData.admissionDate || null,
+        admissionDate: patientData.admissionDate || null,
       };
 
       await api.put(`/patients/${id}`, payload);

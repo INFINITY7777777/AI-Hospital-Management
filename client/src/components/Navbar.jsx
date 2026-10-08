@@ -1,19 +1,11 @@
-import { Link, useNavigate } from "react-router-dom";
-import { Search, Settings, LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Search, Settings } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 
 function Navbar({ onOpenSearch }) {
-  const navigate = useNavigate();
-
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const role = user.role ? String(user.role).toLowerCase().trim() : "";
   const displayName = user.full_name || user.name || user.username || "Staff Member";
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/");
-  };
 
   return (
     <nav className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-xl sm:px-5 lg:px-6">
@@ -68,14 +60,6 @@ function Navbar({ onOpenSearch }) {
             </p>
           </div>
         </div>
-
-        <button
-          onClick={handleLogout}
-          title="Logout"
-          className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 transition-all duration-200 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 active:scale-95"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
       </div>
     </nav>
   );
