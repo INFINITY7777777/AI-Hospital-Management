@@ -15,6 +15,28 @@ const NotificationBell = () => {
     const dropdownRef = useRef(null);
     const audioCtxRef = useRef(null);
 
+    // 3D Tilt & Spotlight State for Dropdown Card
+    const cardRef = useRef(null);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [cardRotate, setCardRotate] = useState({ x: 0, y: 0 });
+    const [isHovered, setIsHovered] = useState(false);
+
+    const handleMouseMoveCard = (e) => {
+        if (!cardRef.current) return;
+        const rect = cardRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        setMousePos({ x, y });
+
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateX = ((y - centerY) / centerY) * -4;
+        const rotateY = ((x - centerX) / centerX) * 4;
+
+        setCardRotate({ x: rotateX, y: rotateY });
+    };
+
     // ==========================================================
     // INITIALIZE & UNLOCK AUDIO CONTEXT ON FIRST USER CLICK
     // ==========================================================
@@ -199,7 +221,7 @@ const NotificationBell = () => {
                         fixed bottom-6 right-6 z-99999 
                         flex w-full max-w-sm items-start gap-3.5 
                         overflow-hidden rounded-2xl border border-slate-200 
-                        bg-white p-4 shadow-2xl
+                        bg-white/90 backdrop-blur-xl p-4 shadow-2xl
                         transition-all duration-300 ease-out
                     "
                     style={{
@@ -265,19 +287,19 @@ const NotificationBell = () => {
                 className="
                     relative flex h-10 w-10 items-center justify-center 
                     rounded-2xl border border-slate-200/80 bg-white/80 
-                    text-slate-600 backdrop-blur-md shadow-sm
+                    text-slate-600 backdrop-blur-md shadow-xs
                     transition-all duration-200 
-                    hover:border-slate-300 hover:bg-slate-50 hover:text-[#08679f] 
-                    active:scale-95 focus:outline-none
+                    hover:-translate-y-0.5 hover:border-[#08679f]/40 hover:bg-white hover:text-[#08679f] hover:shadow-md
+                    active:translate-y-0 active:scale-95 focus:outline-none
                 "
                 aria-label="Notifications"
             >
-                <Bell className="h-5 w-5" />
+                <Bell className="h-5 w-5 transition-transform duration-200 group-hover:scale-110" />
 
                 {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
-                        <span className="relative inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white shadow-sm">
+                        <span className="relative inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white shadow-xs">
                             {unreadCount > 99 ? "99+" : unreadCount}
                         </span>
                     </span>
@@ -285,100 +307,142 @@ const NotificationBell = () => {
             </button>
 
             {/* ==========================================================
-                DROPDOWN MENU
+                DROPDOWN MENU WITH 3D TILT & SPOTLIGHT EFFECT
             ========================================================== */}
             {isOpen && (
-                <div className="absolute right-0 z-50 mt-3 w-80 sm:w-96 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 backdrop-blur-2xl shadow-2xl">
-                    
-                    {/* Header */}
-                    <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-4 py-3.5">
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                                Notifications
-                            </h3>
-                            {unreadCount > 0 && (
-                                <span className="rounded-full bg-[#08679f]/10 px-2 py-0.5 text-[10px] font-bold text-[#08679f]">
-                                    {unreadCount} unread
-                                </span>
-                            )}
-                        </div>
+                <div className="perspective-[1000px] absolute right-0 z-50 mt-3">
+                    <div
+                        ref={cardRef}
+                        onMouseMove={handleMouseMoveCard}
+                        onMouseEnter={() => setIsHovered(true)}
+                        onMouseLeave={() => {
+                            setIsHovered(false);
+                            setCardRotate({ x: 0, y: 0 });
+                        }}
+                        style={{
+                            transform: isHovered
+                                ? `rotateX(${cardRotate.x}deg) rotateY(${cardRotate.y}deg) translateZ(10px)`
+                                : "rotateX(0deg) rotateY(0deg) translateZ(0px)",
+                            transition: isHovered
+                                ? "transform 0.1s ease-out, box-shadow 0.3s ease-out"
+                                : "transform 0.5s ease-out, box-shadow 0.5s ease-out",
+                        }}
+                        className="animate-login-card relative w-80 sm:w-96 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 p-1 shadow-[0_20px_50px_rgba(8,103,159,0.12)] backdrop-blur-2xl hover:border-[#08679f]/40"
+                    >
+                        {/* Dynamic Spotlight Glow effect */}
+                        <div
+                            className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition-opacity duration-300"
+                            style={{
+                                opacity: isHovered ? 1 : 0,
+                                background: `radial-gradient(400px circle at ${mousePos.x}px ${mousePos.y}px, rgba(8, 103, 159, 0.08), transparent 80%)`,
+                            }}
+                        />
 
-                        {/* Top-Right Mark All as Read Button */}
-                        {unreadCount > 0 && (
-                            <button
-                                type="button"
-                                onClick={handleMarkAllAsRead}
-                                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#08679f] hover:underline"
-                            >
-                                <Check className="h-3.5 w-3.5" />
-                                Mark all as read
-                            </button>
-                        )}
-                    </div>
+                        {/* Border Light Highlight */}
+                        <div
+                            className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition-opacity duration-300"
+                            style={{
+                                opacity: isHovered ? 1 : 0,
+                                background: `radial-gradient(300px circle at ${mousePos.x}px ${mousePos.y}px, rgba(8, 103, 159, 0.25), transparent 100%)`,
+                                maskImage: "linear-gradient(#black, #black) content-box, linear-gradient(#black, #black)",
+                                maskComposite: "exclude",
+                                WebkitMaskComposite: "xor",
+                                padding: "1px",
+                            }}
+                        />
 
-                    {/* Notification List */}
-                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
-                        {notifications.length === 0 ? (
-                            <div className="p-8 text-center text-xs font-medium text-slate-400">
-                                No notifications yet
-                            </div>
-                        ) : (
-                            notifications.map((item) => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => handleMarkAsRead(item.id, item.patient_id)}
-                                    className={`
-                                        flex items-start gap-3 p-3.5 transition-all duration-150 cursor-pointer
-                                        ${item.is_read ? "bg-white hover:bg-slate-50 opacity-80" : "bg-sky-50/40 hover:bg-sky-50/80"}
-                                    `}
-                                >
-                                    <div className="mt-0.5">
-                                        {item.type === "critical" ? (
-                                            <ShieldAlert className="h-4 w-4 text-rose-500" />
-                                        ) : item.type === "warning" ? (
-                                            <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                        ) : (
-                                            <Info className="h-4 w-4 text-sky-500" />
-                                        )}
-                                    </div>
-                                    
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <h4 className={`text-xs ${item.is_read ? "font-semibold text-slate-700" : "font-bold text-slate-900"}`}>
-                                                {item.title}
-                                            </h4>
-                                            {!item.is_read && (
-                                                <span className="h-2 w-2 rounded-full bg-[#08679f] shrink-0" />
-                                            )}
-                                        </div>
-
-                                        <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-600 line-clamp-2">
-                                            {item.message}
-                                        </p>
-
-                                        <div className="mt-2 flex items-center gap-2 text-[10px] font-medium text-slate-400">
-                                            <span>From: {item.sender_name || "System"}</span>
-                                            <span>•</span>
-                                            <span>{new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                    </div>
+                        {/* Inner Container */}
+                        <div className="relative z-10">
+                            {/* Header */}
+                            <div className="flex items-center justify-between border-b border-slate-100/80 bg-slate-50/70 px-4 py-3.5 rounded-t-2xl">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                                        Notifications
+                                    </h3>
+                                    {unreadCount > 0 && (
+                                        <span className="rounded-full bg-[#08679f]/10 px-2 py-0.5 text-[10px] font-bold text-[#08679f]">
+                                            {unreadCount} unread
+                                        </span>
+                                    )}
                                 </div>
-                            ))
-                        )}
-                    </div>
 
-                    {/* Footer - Full Page Link */}
-                    <div className="border-t border-slate-100 bg-slate-50/50 p-2.5 text-center">
-                        <button
-                            type="button"
-                            onClick={handleOpenMoreActions}
-                            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold text-[#08679f] transition-all hover:bg-white hover:shadow-sm active:scale-[0.99]"
-                        >
-                            <span>See All Notifications & Management</span>
-                            <ExternalLink className="h-3.5 w-3.5" />
-                        </button>
-                    </div>
+                                {/* Top-Right Mark All as Read Button */}
+                                {unreadCount > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleMarkAllAsRead}
+                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#08679f] transition-colors hover:text-[#07557f] hover:underline"
+                                    >
+                                        <Check className="h-3.5 w-3.5" />
+                                        Mark all as read
+                                    </button>
+                                )}
+                            </div>
 
+                            {/* Notification List */}
+                            <div className="max-h-80 overflow-y-auto divide-y divide-slate-100/80">
+                                {notifications.length === 0 ? (
+                                    <div className="p-8 text-center text-xs font-medium text-slate-400">
+                                        No notifications yet
+                                    </div>
+                                ) : (
+                                    notifications.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => handleMarkAsRead(item.id, item.patient_id)}
+                                            className={`
+                                                flex items-start gap-3 p-3.5 transition-all duration-150 cursor-pointer
+                                                ${item.is_read ? "bg-white/80 hover:bg-slate-50 opacity-80" : "bg-sky-50/50 hover:bg-sky-50/90"}
+                                            `}
+                                        >
+                                            <div className="mt-0.5">
+                                                {item.type === "critical" ? (
+                                                    <ShieldAlert className="h-4 w-4 text-rose-500" />
+                                                ) : item.type === "warning" ? (
+                                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                                ) : (
+                                                    <Info className="h-4 w-4 text-sky-500" />
+                                                )}
+                                            </div>
+                                            
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <h4 className={`text-xs ${item.is_read ? "font-semibold text-slate-700" : "font-bold text-slate-900"}`}>
+                                                        {item.title}
+                                                    </h4>
+                                                    {!item.is_read && (
+                                                        <span className="h-2 w-2 rounded-full bg-[#08679f] shrink-0" />
+                                                    )}
+                                                </div>
+
+                                                <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-600 line-clamp-2">
+                                                    {item.message}
+                                                </p>
+
+                                                <div className="mt-2 flex items-center gap-2 text-[10px] font-medium text-slate-400">
+                                                    <span>From: {item.sender_name || "System"}</span>
+                                                    <span>•</span>
+                                                    <span>{new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Footer - Full Page Link */}
+                            <div className="border-t border-slate-100/80 bg-slate-50/50 p-2 text-center rounded-b-2xl">
+                                <button
+                                    type="button"
+                                    onClick={handleOpenMoreActions}
+                                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold text-[#08679f] transition-all duration-200 hover:bg-white hover:shadow-xs active:scale-[0.99]"
+                                >
+                                    <span>See All Notifications &amp; Management</span>
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

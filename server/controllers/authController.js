@@ -2,6 +2,13 @@ const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+// Helper function to ensure doctor names start with "Dr. "
+const formatDoctorName = (name) => {
+  if (!name) return "";
+  const trimmed = name.trim();
+  return /^dr\./i.test(trimmed) ? trimmed : `Dr. ${trimmed}`;
+};
+
 const registerUser = async (req, res) => {
   try {
     const {
@@ -34,6 +41,9 @@ const registerUser = async (req, res) => {
       });
     }
 
+    const isDoctor = String(role).toLowerCase().trim() === "doctor";
+    const formattedName = isDoctor ? formatDoctorName(full_name) : full_name.trim();
+
     const passwordHash = await bcrypt.hash(password, 10);
     const mpinHash = await bcrypt.hash(mpin, 10);
 
@@ -56,7 +66,7 @@ const registerUser = async (req, res) => {
       RETURNING id, full_name, email, role, department, phone;
       `,
       [
-        full_name,
+        formattedName,
         email,
         passwordHash,
         mpinHash,
@@ -70,7 +80,7 @@ const registerUser = async (req, res) => {
 
     const newUser = result.rows[0];
 
-    if (String(role).toLowerCase().trim() === "doctor") {
+    if (isDoctor) {
       try {
         await db.query(
           `
@@ -85,7 +95,7 @@ const registerUser = async (req, res) => {
           VALUES ($1, $2, $3, $4, $5, $6);
           `,
           [
-            full_name,
+            formattedName,
             specialization || "General Physician",
             phone || null,
             email || null,
@@ -125,6 +135,9 @@ const adminCreateUser = async (req, res) => {
       return res.status(409).json({ error: "A user with this email already exists." });
     }
 
+    const isDoctor = String(role).toLowerCase().trim() === "doctor";
+    const formattedName = isDoctor ? formatDoctorName(full_name) : full_name.trim();
+
     const passwordHash = await bcrypt.hash(password, 10);
     const defaultMpinHash = await bcrypt.hash("1234", 10);
 
@@ -135,7 +148,7 @@ const adminCreateUser = async (req, res) => {
       RETURNING id, full_name, email, role, department, phone;
       `,
       [
-        full_name,
+        formattedName,
         email,
         passwordHash,
         defaultMpinHash,
@@ -148,12 +161,12 @@ const adminCreateUser = async (req, res) => {
 
     const newUser = result.rows[0];
 
-    if (String(role).toLowerCase().trim() === "doctor") {
+    if (isDoctor) {
       try {
         await db.query(
           `INSERT INTO doctors (doctor_name, specialization, phone, email, department)
            VALUES ($1, $2, $3, $4, $5);`,
-          [full_name, specialization || "General Physician", phone || null, email, department || "General"]
+          [formattedName, specialization || "General Physician", phone || null, email, department || "General"]
         );
       } catch (err) {
         console.error("[Doctor Sync Error]:", err.message);

@@ -1,4 +1,3 @@
-
 const pool = require("../config/db");
 
 // --------------------------------------------------
@@ -75,7 +74,13 @@ const getAllBeds = async (req, res) => {
 
     try {
         let query = `
-            SELECT b.*, p.patient_name, p.doctor
+            SELECT 
+                b.*, 
+                p.patient_name, 
+                p.phone AS patient_phone, 
+                p.age AS patient_age, 
+                p.gender AS patient_gender, 
+                p.doctor
             FROM beds b
             LEFT JOIN patients p ON p.id = b.patient_id
         `;
@@ -141,7 +146,13 @@ const getBedById = async (req, res) => {
 
     try {
         let query = `
-            SELECT b.*, p.patient_name, p.doctor
+            SELECT 
+                b.*, 
+                p.patient_name, 
+                p.phone AS patient_phone, 
+                p.age AS patient_age, 
+                p.gender AS patient_gender, 
+                p.doctor
             FROM beds b
             LEFT JOIN patients p ON p.id = b.patient_id
             WHERE b.id = $1
@@ -157,7 +168,13 @@ const getBedById = async (req, res) => {
             }
 
             query = `
-                SELECT b.*, p.patient_name, p.doctor
+                SELECT 
+                    b.*, 
+                    p.patient_name, 
+                    p.phone AS patient_phone, 
+                    p.age AS patient_age, 
+                    p.gender AS patient_gender, 
+                    p.doctor
                 FROM beds b
                 LEFT JOIN patients p ON p.id = b.patient_id
                 JOIN users u ON u.id = $2
@@ -408,8 +425,6 @@ const assignBed = async (req, res) => {
             });
         }
 
-        // Do not silently reconcile a bed that is already marked
-        // occupied without a matching active admission.
         const existingOccupiedBed = await client.query(
             `SELECT id
              FROM beds
@@ -545,9 +560,7 @@ const assignBed = async (req, res) => {
 
 // --------------------------------------------------
 // RELEASE BED
-// Admission stays active; its bed assignment is cleared.
 // --------------------------------------------------
-
 
 const releaseBed = async (req, res) => {
     const { id } = req.params;
@@ -567,8 +580,6 @@ const releaseBed = async (req, res) => {
         await client.query("BEGIN");
         transactionStarted = true;
 
-        // Lock the bed first so simultaneous release/assignment requests
-        // cannot modify this bed concurrently.
         const bedResult = await client.query(
             "SELECT * FROM beds WHERE id = $1 FOR UPDATE",
             [Number(id)]
@@ -601,7 +612,6 @@ const releaseBed = async (req, res) => {
 
         const patientId = Number(bed.patient_id);
 
-        // Ensure the assigned patient still exists.
         const patientResult = await client.query(
             "SELECT id FROM patients WHERE id = $1 FOR UPDATE",
             [patientId]
@@ -617,8 +627,6 @@ const releaseBed = async (req, res) => {
             });
         }
 
-        // Find every active admission for this patient.
-        // Do not guess if the database contains multiple active admissions.
         const admissionResult = await client.query(
             `SELECT id, patient_id, bed_id, status
              FROM admissions
@@ -644,7 +652,6 @@ const releaseBed = async (req, res) => {
         let activeStays = [];
 
         if (admission) {
-            // An active admission assigned to a different bed is a conflict.
             if (
                 admission.bed_id !== null &&
                 Number(admission.bed_id) !== Number(id)
@@ -669,8 +676,6 @@ const releaseBed = async (req, res) => {
 
             activeStays = stayResult.rows;
 
-            // A matching admission must not have an active stay assigned
-            // to a different bed or patient.
             const conflictingStay = activeStays.some(
                 (stay) =>
                     Number(stay.patient_id) !== patientId ||
@@ -687,8 +692,6 @@ const releaseBed = async (req, res) => {
                 });
             }
         } else {
-            // An orphaned occupied bed can be released only if no active
-            // stay-history record claims this bed or patient.
             const conflictingStays = await client.query(
                 `SELECT id
                  FROM patient_stay_history
@@ -711,7 +714,6 @@ const releaseBed = async (req, res) => {
             }
         }
 
-        // Complete the active stay when one exists.
         if (admission && activeStays.length === 1) {
             const stay = activeStays[0];
 
@@ -731,7 +733,6 @@ const releaseBed = async (req, res) => {
             }
         }
 
-        // Preserve the active admission, but clear its bed assignment.
         if (admission && admission.bed_id !== null) {
             const admissionUpdate = await client.query(
                 `UPDATE admissions
@@ -748,7 +749,6 @@ const releaseBed = async (req, res) => {
             }
         }
 
-        // Free the bed only after validating and updating related records.
         const bedUpdate = await client.query(
             `UPDATE beds
              SET status = 'Available',

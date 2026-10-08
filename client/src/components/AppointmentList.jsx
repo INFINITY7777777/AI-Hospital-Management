@@ -1,6 +1,5 @@
-
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../services/api";
 
 function AppointmentList({
@@ -9,6 +8,8 @@ function AppointmentList({
   refreshAppointments,
 }) {
   const navigate = useNavigate();
+  const tableRef = useRef(null);
+  const tableContainerRef = useRef(null);
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +32,6 @@ function AppointmentList({
           setError("");
         }
 
-        // The shared API service adds the JWT Authorization header.
         const response = await api.get("/appointments");
 
         if (isMounted) {
@@ -149,6 +149,29 @@ function AppointmentList({
     return matchesFilter && matchesSearch;
   });
 
+  const handleTableMouseMove = (event) => {
+    const container = tableContainerRef.current;
+
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    container.style.setProperty("--mouse-x", `${x}px`);
+    container.style.setProperty("--mouse-y", `${y}px`);
+  };
+
+  const handleTableMouseLeave = () => {
+    const container = tableContainerRef.current;
+
+    if (!container) return;
+
+    container.style.setProperty("--mouse-x", "50%");
+    container.style.setProperty("--mouse-y", "50%");
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -185,10 +208,14 @@ function AppointmentList({
 
         <div className="inline-flex items-center gap-2 rounded-xl bg-slate-100/80 px-3 py-1.5 text-xs font-semibold text-slate-600 self-start sm:self-auto">
           <span>Showing:</span>
+
           <span className="text-[#08679F] font-bold">
             {filteredAppointments.length}
           </span>
-          <span className="text-slate-400">/ {appointments.length}</span>
+
+          <span className="text-slate-400">
+            / {appointments.length}
+          </span>
         </div>
       </div>
 
@@ -202,7 +229,9 @@ function AppointmentList({
             strokeWidth="2"
           >
             <circle cx="12" cy="12" r="10" />
+
             <line x1="12" y1="8" x2="12" y2="12" />
+
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
 
@@ -210,119 +239,220 @@ function AppointmentList({
         </div>
       )}
 
-      {filteredAppointments.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3">
-            <svg
-              className="h-6 w-6"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
-              />
-            </svg>
-          </div>
+      <div
+        ref={tableContainerRef}
+        onMouseMove={handleTableMouseMove}
+        onMouseLeave={handleTableMouseLeave}
+        className="
+          relative
+          overflow-x-auto
+          rounded-xl
+          border
+          border-slate-200/80
+          bg-white
+          isolate
+          transition-all
+          duration-300
+          ease-out
+          hover:border-[#08679F]/30
+          hover:shadow-[0_12px_40px_rgba(8,103,159,0.08)]
+          before:pointer-events-none
+          before:absolute
+          before:inset-0
+          before:z-20
+          before:rounded-xl
+          before:opacity-0
+          before:transition-opacity
+          before:duration-300
+          hover:before:opacity-100
+          after:pointer-events-none
+          after:absolute
+          after:inset-0
+          after:z-30
+          after:rounded-xl
+          after:border
+          after:border-transparent
+          after:opacity-0
+          after:transition-opacity
+          after:duration-300
+          hover:after:opacity-100
+        "
+        style={{
+          "--mouse-x": "50%",
+          "--mouse-y": "50%",
+          backgroundImage:
+            "linear-gradient(#ffffff, #ffffff), linear-gradient(135deg, rgba(8,103,159,0.20), rgba(34,211,238,0.10), rgba(99,102,241,0.12))",
+          backgroundOrigin: "border-box",
+          backgroundClip: "padding-box, border-box",
+        }}
+      >
+        <div
+          className="
+            pointer-events-none
+            absolute
+            inset-0
+            z-20
+            rounded-xl
+            opacity-0
+            transition-opacity
+            duration-300
+            hover:opacity-100
+          "
+          style={{
+            background:
+              "radial-gradient(500px circle at var(--mouse-x) var(--mouse-y), rgba(8,103,159,0.075), transparent 55%)",
+          }}
+        />
 
-          <h3 className="text-sm font-bold text-slate-800">
-            No Appointments Found
-          </h3>
+        <div
+          className="
+            pointer-events-none
+            absolute
+            inset-0
+            z-30
+            rounded-xl
+            opacity-0
+            transition-opacity
+            duration-300
+            hover:opacity-100
+          "
+          style={{
+            background:
+              "radial-gradient(350px circle at var(--mouse-x) var(--mouse-y), rgba(8,103,159,0.18), transparent 65%)",
+            maskImage:
+              "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+            WebkitMaskImage:
+              "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+            maskComposite: "exclude",
+            WebkitMaskComposite: "xor",
+            padding: "1px",
+          }}
+        />
 
-          <p className="mt-1 text-xs text-slate-500 max-w-sm">
-            {searchTerm
-              ? `No appointments matching "${searchTerm}".`
-              : filter === "today"
-              ? "No appointments scheduled for today."
-              : filter === "upcoming"
-              ? "No upcoming appointments found."
-              : "Create an appointment to see it listed here."}
-          </p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
-          <table className="w-full text-left text-xs text-slate-600">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th scope="col" className="px-4 py-3">Patient</th>
-                <th scope="col" className="px-4 py-3">Doctor</th>
-                <th scope="col" className="px-4 py-3">Specialization</th>
-                <th scope="col" className="px-4 py-3">Date</th>
-                <th scope="col" className="px-4 py-3">Time</th>
-                <th scope="col" className="px-4 py-3">Reason</th>
-                <th scope="col" className="px-4 py-3">Status</th>
-                <th scope="col" className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
+        <table
+          ref={tableRef}
+          className="relative z-10 w-full text-left text-xs text-slate-600"
+        >
+          <thead>
+            <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <th scope="col" className="px-4 py-3">
+                Patient
+              </th>
 
-            <tbody className="divide-y divide-slate-100">
-              {filteredAppointments.map((appointment) => (
-                <tr
-                  key={appointment.id}
-                  className="hover:bg-slate-50/60 transition-colors duration-150"
-                >
-                  <td className="px-4 py-3.5 font-semibold text-slate-900">
-                    {appointment.patient_name || "—"}
-                  </td>
+              <th scope="col" className="px-4 py-3">
+                Doctor
+              </th>
 
-                  <td className="px-4 py-3.5 text-slate-700 font-medium">
-                    {appointment.doctor_name || "—"}
-                  </td>
+              <th scope="col" className="px-4 py-3">
+                Specialization
+              </th>
 
-                  <td className="px-4 py-3.5 text-slate-600">
-                    {appointment.specialization || "—"}
-                  </td>
+              <th scope="col" className="px-4 py-3">
+                Date
+              </th>
 
-                  <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
-                    {formatDateDisplay(appointment.appointment_date)}
-                  </td>
+              <th scope="col" className="px-4 py-3">
+                Time
+              </th>
 
-                  <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap font-medium">
-                    {appointment.appointment_time || "—"}
-                  </td>
+              <th scope="col" className="px-4 py-3">
+                Reason
+              </th>
 
-                  <td className="px-4 py-3.5 text-slate-600 max-w-xs truncate">
-                    {appointment.reason || "N/A"}
-                  </td>
+              <th scope="col" className="px-4 py-3">
+                Status
+              </th>
 
-                  <td className="px-4 py-3.5">
-                    {renderStatusBadge(appointment.status)}
-                  </td>
+              <th scope="col" className="px-4 py-3 text-right">
+                Actions
+              </th>
+            </tr>
+          </thead>
 
-                  <td className="px-4 py-3.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(`/appointments/${appointment.id}`)
-                      }
-                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-100 hover:bg-[#08679F] text-slate-700 hover:text-white text-xs font-semibold transition-all duration-150 active:scale-[0.98]"
+          <tbody className="divide-y divide-slate-100">
+            {filteredAppointments.map((appointment) => (
+              <tr
+                key={appointment.id}
+                className="
+                  hover:bg-slate-50/60
+                  transition-colors
+                  duration-150
+                "
+              >
+                <td className="px-4 py-3.5 font-semibold text-slate-900">
+                  {appointment.patient_name || "—"}
+                </td>
+
+                <td className="px-4 py-3.5 text-slate-700 font-medium">
+                  {appointment.doctor_name || "—"}
+                </td>
+
+                <td className="px-4 py-3.5 text-slate-600">
+                  {appointment.specialization || "—"}
+                </td>
+
+                <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
+                  {formatDateDisplay(appointment.appointment_date)}
+                </td>
+
+                <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap font-medium">
+                  {appointment.appointment_time || "—"}
+                </td>
+
+                <td className="px-4 py-3.5 text-slate-600 max-w-xs truncate">
+                  {appointment.reason || "N/A"}
+                </td>
+
+                <td className="px-4 py-3.5">
+                  {renderStatusBadge(appointment.status)}
+                </td>
+
+                <td className="px-4 py-3.5 text-right">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(`/appointments/${appointment.id}`)
+                    }
+                    className="
+                      inline-flex
+                      items-center
+                      gap-1.5
+                      h-8
+                      px-3
+                      rounded-lg
+                      bg-slate-100
+                      hover:bg-[#08679F]
+                      text-slate-700
+                      hover:text-white
+                      text-xs
+                      font-semibold
+                      transition-all
+                      duration-150
+                      active:scale-[0.98]
+                    "
+                  >
+                    <span>View</span>
+
+                    <svg
+                      className="h-3 w-3"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
                     >
-                      <span>View</span>
-
-                      <svg
-                        className="h-3 w-3"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                        />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                      />
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -156,20 +156,53 @@ const setupMpin = async (req, res) => {
   }
 };
 
-// 5. System Preferences
+// 5. System Preferences (FIXED)
 const updateSystemPreferences = async (req, res) => {
   const userId = req.user.id;
-  const { hospital_name, hospital_phone, hospital_address, timezone, auto_logout_hours, inapp_notifications, email_notifications } = req.body;
+  const { 
+    hospital_name, 
+    hospital_phone, 
+    hospital_address, 
+    timezone, 
+    auto_logout_hours, 
+    inapp_notifications = true, 
+    email_notifications = true 
+  } = req.body;
 
   try {
     const result = await db.query(
       `UPDATE user_settings 
-       SET hospital_name = $1, hospital_phone = $2, hospital_address = $3, 
-           timezone = $4, auto_logout_hours = $5, inapp_notifications = $6, 
-           email_notifications = $7, updated_at = NOW()
+       SET hospital_name = $1, 
+           hospital_phone = $2, 
+           hospital_address = $3, 
+           timezone = $4, 
+           auto_logout_hours = $5, 
+           inapp_notifications = $6, 
+           email_notifications = $7, 
+           updated_at = NOW()
        WHERE user_id = $8 RETURNING *;`,
-      [hospital_name, hospital_phone, hospital_address, timezone, auto_logout_hours, auto_logout_hours, inapp_notifications, email_notifications, userId]
+      [
+        hospital_name || null, 
+        hospital_phone || null, 
+        hospital_address || null, 
+        timezone || "UTC", 
+        auto_logout_hours || 8, 
+        inapp_notifications, 
+        email_notifications, 
+        userId
+      ]
     );
+
+    if (result.rows.length === 0) {
+      // Create user_settings row if it doesn't exist yet
+      const newSettings = await db.query(
+        `INSERT INTO user_settings (user_id, hospital_name, hospital_phone, hospital_address, timezone, auto_logout_hours, inapp_notifications, email_notifications)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;`,
+        [userId, hospital_name || null, hospital_phone || null, hospital_address || null, timezone || "UTC", auto_logout_hours || 8, inapp_notifications, email_notifications]
+      );
+      return res.status(200).json({ settings: newSettings.rows[0], message: "Preferences saved successfully" });
+    }
+
     res.status(200).json({ settings: result.rows[0], message: "Preferences saved successfully" });
   } catch (error) {
     console.error("[Preferences Update Error]:", error);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   User,
@@ -20,6 +20,7 @@ import {
 import api from "../services/api";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
+import MedicalPlusBackground from "../components/MedicalPlusBackground";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -27,6 +28,28 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // 3D Tilt & Spotlight state for main container
+  const settingsCardRef = useRef(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [cardRotate, setCardRotate] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMoveCard = (e) => {
+    if (!settingsCardRef.current) return;
+    const rect = settingsCardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setMousePos({ x, y });
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -2;
+    const rotateY = ((x - centerX) / centerX) * 2;
+
+    setCardRotate({ x: rotateX, y: rotateY });
+  };
 
   const [profile, setProfile] = useState({
     name: "",
@@ -182,20 +205,70 @@ export default function Settings() {
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F6F8FC] font-sans antialiased text-slate-800">
+    <div className="relative flex h-screen overflow-hidden bg-[#F6F8FC] font-sans antialiased text-slate-800">
+      {/* Interactive Medical + Canvas Hover Effect */}
+      <MedicalPlusBackground />
+
+      {/* Background decoration */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
+        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#08679F]/10 blur-3xl" />
+        <div className="absolute -right-32 top-1/4 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="absolute inset-0 bg-linear-to-br from-white/70 via-[#F6F8FC]/60 to-[#F8FAFC]/80" />
+      </div>
+
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
         <Navbar />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-5xl space-y-6">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 perspective-[1000px]">
+          <div
+            ref={settingsCardRef}
+            onMouseMove={handleMouseMoveCard}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => {
+              setIsHovered(false);
+              setCardRotate({ x: 0, y: 0 });
+            }}
+            style={{
+              transform: isHovered
+                ? `rotateX(${cardRotate.x}deg) rotateY(${cardRotate.y}deg) translateZ(5px)`
+                : "rotateX(0deg) rotateY(0deg) translateZ(0px)",
+              transition: isHovered
+                ? "transform 0.1s ease-out, box-shadow 0.3s ease-out"
+                : "transform 0.5s ease-out, box-shadow 0.5s ease-out",
+            }}
+            className="animate-login-card relative mx-auto max-w-5xl space-y-6 overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/80 p-6 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:p-8 hover:border-[#08679F]/40 hover:shadow-[0_20px_50px_rgba(8,103,159,0.12)]"
+          >
+            {/* Dynamic Spotlight Glow effect */}
+            <div
+              className="pointer-events-none absolute -inset-px rounded-[26px] opacity-0 transition-opacity duration-300"
+              style={{
+                opacity: isHovered ? 1 : 0,
+                background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(8, 103, 159, 0.08), transparent 80%)`,
+              }}
+            />
+
+            {/* Card Border Light Highlight */}
+            <div
+              className="pointer-events-none absolute -inset-px rounded-[26px] opacity-0 transition-opacity duration-300"
+              style={{
+                opacity: isHovered ? 1 : 0,
+                background: `radial-gradient(400px circle at ${mousePos.x}px ${mousePos.y}px, rgba(8, 103, 159, 0.25), transparent 100%)`,
+                maskImage: "linear-gradient(#black, #black) content-box, linear-gradient(#black, #black)",
+                maskComposite: "exclude",
+                WebkitMaskComposite: "xor",
+                padding: "1px",
+              }}
+            />
+
             {/* Page Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 sm:p-6 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+            <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/80 p-5 sm:p-6 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-md">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xl">⚙️</span>
                   <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                    Settings & System Security
+                    Settings &amp; System Security
                   </h1>
                 </div>
                 <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
@@ -215,21 +288,21 @@ export default function Settings() {
 
             {/* Feedback Alerts */}
             {statusMsg && (
-              <div className="flex items-center gap-2 p-4 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-2xl border border-emerald-200 shadow-xs">
+              <div className="relative z-10 flex items-center gap-2 p-4 bg-emerald-50/90 text-emerald-800 text-xs font-semibold rounded-2xl border border-emerald-200 shadow-xs backdrop-blur-md">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                 <span>{statusMsg}</span>
               </div>
             )}
 
             {errorMsg && (
-              <div className="flex items-center gap-2 p-4 bg-rose-50 text-rose-800 text-xs font-semibold rounded-2xl border border-rose-200 shadow-xs">
+              <div className="relative z-10 flex items-center gap-2 p-4 bg-rose-50/90 text-rose-800 text-xs font-semibold rounded-2xl border border-rose-200 shadow-xs backdrop-blur-md">
                 <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2 overflow-x-auto">
+            <div className="relative z-10 flex items-center gap-2 border-b border-slate-200/80 pb-2 overflow-x-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -237,10 +310,10 @@ export default function Settings() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 h-10 px-4 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                    className={`flex items-center gap-2 h-10 px-4 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap ${
                       isActive
                         ? "bg-[#08679F] text-white shadow-xs"
-                        : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
+                        : "bg-white/80 text-slate-600 hover:bg-slate-50 border border-slate-200/80"
                     }`}
                   >
                     <Icon
@@ -255,19 +328,19 @@ export default function Settings() {
             </div>
 
             {loading ? (
-              <div className="bg-white rounded-[22px] border border-slate-200/80 p-12 text-center shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+              <div className="relative z-10 bg-white/80 rounded-[22px] border border-slate-200/80 p-12 text-center shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-md">
                 <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-[#08679F] border-t-transparent"></div>
                 <p className="mt-2 text-xs font-medium text-slate-500">
                   Loading system configurations...
                 </p>
               </div>
             ) : (
-              <div className="mx-auto max-w-3xl space-y-6">
+              <div className="relative z-10 mx-auto max-w-3xl space-y-6">
                 {/* TAB 1: PROFILE */}
                 {activeTab === "profile" && (
                   <form
                     onSubmit={handleProfileSubmit}
-                    className="bg-white p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] space-y-5"
+                    className="bg-white/80 p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-md space-y-5"
                   >
                     <div className="border-b border-slate-100 pb-3">
                       <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
@@ -355,10 +428,12 @@ export default function Settings() {
                     <div className="pt-2">
                       <button
                         type="submit"
-                        className="w-full h-10 bg-[#08679F] hover:bg-[#07557F] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-[#08679F]/20 transition-all duration-150 active:scale-[0.99] cursor-pointer"
+                        className="group relative overflow-hidden w-full h-10 bg-[#08679F] hover:bg-[#07557F] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-[#08679F]/20 transition-all duration-300 ease-out hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                       >
-                        <Save className="h-4 w-4" />
-                        <span>Save Profile Details</span>
+                        <span className="absolute inset-0 rounded-xl border border-white/20 transition-opacity duration-300 group-hover:opacity-100" />
+                        <span className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
+                        <Save className="h-4 w-4 relative z-10" />
+                        <span className="relative z-10">Save Profile Details</span>
                       </button>
                     </div>
                   </form>
@@ -370,7 +445,7 @@ export default function Settings() {
                     {/* Password Form */}
                     <form
                       onSubmit={handlePasswordSubmit}
-                      className="bg-white p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] space-y-4"
+                      className="bg-white/80 p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-md space-y-4"
                     >
                       <div className="border-b border-slate-100 pb-3">
                         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
@@ -427,10 +502,12 @@ export default function Settings() {
                       <div className="pt-2">
                         <button
                           type="submit"
-                          className="w-full h-10 bg-[#08679F] hover:bg-[#07557F] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-[#08679F]/20 transition-all duration-150 active:scale-[0.99] cursor-pointer"
+                          className="group relative overflow-hidden w-full h-10 bg-[#08679F] hover:bg-[#07557F] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-[#08679F]/20 transition-all duration-300 ease-out hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                         >
-                          <Lock className="h-4 w-4" />
-                          <span>Update Password</span>
+                          <span className="absolute inset-0 rounded-xl border border-white/20 transition-opacity duration-300 group-hover:opacity-100" />
+                          <span className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
+                          <Lock className="h-4 w-4 relative z-10" />
+                          <span className="relative z-10">Update Password</span>
                         </button>
                       </div>
                     </form>
@@ -438,7 +515,7 @@ export default function Settings() {
                     {/* Security MPIN Form */}
                     <form
                       onSubmit={handleMpinSubmit}
-                      className="bg-white p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] space-y-4"
+                      className="bg-white/80 p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-md space-y-4"
                     >
                       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
@@ -512,10 +589,10 @@ export default function Settings() {
                       <div className="pt-2">
                         <button
                           type="submit"
-                          className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-slate-900/10 transition-all duration-150 active:scale-[0.99] cursor-pointer"
+                          className="group relative overflow-hidden w-full h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-slate-900/10 transition-all duration-300 ease-out hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                         >
-                          <ShieldCheck className="h-4 w-4" />
-                          <span>
+                          <ShieldCheck className="h-4 w-4 relative z-10" />
+                          <span className="relative z-10">
                             {profile.is_mpin_enabled
                               ? "Update Security MPIN"
                               : "Set Security MPIN"}
@@ -528,7 +605,7 @@ export default function Settings() {
                     {profile.role === "admin" && (
                       <form
                         onSubmit={handleAdminPasswordReset}
-                        className="bg-white p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] space-y-4"
+                        className="bg-white/80 p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-md space-y-4"
                       >
                         <div className="border-b border-slate-100 pb-3">
                           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
@@ -579,10 +656,10 @@ export default function Settings() {
                         <div className="pt-2">
                           <button
                             type="submit"
-                            className="w-full h-10 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-amber-600/20 transition-all duration-150 active:scale-[0.99] cursor-pointer"
+                            className="group relative overflow-hidden w-full h-10 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-amber-600/20 transition-all duration-300 ease-out hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                           >
-                            <RotateCcw className="h-4 w-4" />
-                            <span>Reset User Password</span>
+                            <RotateCcw className="h-4 w-4 relative z-10" />
+                            <span className="relative z-10">Reset User Password</span>
                           </button>
                         </div>
                       </form>
@@ -594,11 +671,11 @@ export default function Settings() {
                 {activeTab === "system" && (
                   <form
                     onSubmit={handlePreferencesSubmit}
-                    className="bg-white p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] space-y-4"
+                    className="bg-white/80 p-6 sm:p-8 rounded-[22px] border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-md space-y-4"
                   >
                     <div className="border-b border-slate-100 pb-3">
                       <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                        Hospital Branding & Shift Rules
+                        Hospital Branding &amp; Shift Rules
                       </h2>
                     </div>
 
@@ -689,10 +766,12 @@ export default function Settings() {
                     <div className="pt-2">
                       <button
                         type="submit"
-                        className="w-full h-10 bg-[#08679F] hover:bg-[#07557F] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-[#08679F]/20 transition-all duration-150 active:scale-[0.99] cursor-pointer"
+                        className="group relative overflow-hidden w-full h-10 bg-[#08679F] hover:bg-[#07557F] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-[#08679F]/20 transition-all duration-300 ease-out hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                       >
-                        <Save className="h-4 w-4" />
-                        <span>Save System Preferences</span>
+                        <span className="absolute inset-0 rounded-xl border border-white/20 transition-opacity duration-300 group-hover:opacity-100" />
+                        <span className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
+                        <Save className="h-4 w-4 relative z-10" />
+                        <span className="relative z-10">Save System Preferences</span>
                       </button>
                     </div>
                   </form>
@@ -702,6 +781,30 @@ export default function Settings() {
           </div>
         </main>
       </div>
+
+      {/* Animation styles */}
+      <style>{`
+        @keyframes loginCardIn {
+          from {
+            opacity: 0;
+            transform: translateY(12px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .animate-login-card {
+          animation: loginCardIn 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .animate-login-card {
+            animation: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }

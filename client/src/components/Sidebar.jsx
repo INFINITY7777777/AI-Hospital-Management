@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -26,6 +26,28 @@ export default function Sidebar() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const userRole = user?.role?.toLowerCase() || "";
   const isAdmin = userRole === "admin";
+
+  // 3D Tilt & Interactive Spotlight State
+  const sidebarRef = useRef(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [cardRotate, setCardRotate] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e) => {
+    if (!sidebarRef.current) return;
+    const rect = sidebarRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setMousePos({ x, y });
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -4;
+    const rotateY = ((x - centerX) / centerX) * 4;
+
+    setCardRotate({ x: rotateX, y: rotateY });
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -107,134 +129,112 @@ export default function Sidebar() {
               className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-95"
             />
 
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ duration: 0.35, ease }}
-              className="fixed top-0 left-0 bottom-0 z-100 w-64 bg-[#0b1b32] border-r border-slate-800 shadow-[10px_0_40px_rgba(0,0,0,0.5)] flex flex-col justify-between font-sans text-slate-300 overflow-hidden"
-            >
-              {/* TOP BRANDING & NAVIGATION */}
-              <div className="overflow-y-auto">
-                <div className="border-b border-white/5 px-5 py-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-400/10 bg-[#102844] text-cyan-400">
-                      <Activity className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <h1 className="truncate text-xs font-bold tracking-tight text-white">
-                          Hospital System
-                        </h1>
-                        <span className="shrink-0 rounded-full border border-blue-400/20 bg-blue-500/10 px-1.5 py-0.5 text-[8px] font-bold text-blue-300">
-                          v2.0
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-[9px] font-medium uppercase tracking-wider text-slate-500">
-                        HMS Portal
-                      </p>
-                    </div>
-                  </div>
+            {/* 3D Perspective Wrapper - Controlled overflow */}
+            <div className="fixed top-0 left-0 bottom-0 z-100 w-64 overflow-hidden pointer-events-none perspective-[1000px]">
+              <motion.aside
+                ref={sidebarRef}
+                onMouseMove={handleMouseMove}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => {
+                  setIsHovered(false);
+                  setCardRotate({ x: 0, y: 0 });
+                }}
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ duration: 0.35, ease }}
+                style={{
+                  transform: isHovered
+                    ? `rotateX(${cardRotate.x}deg) rotateY(${cardRotate.y}deg) translateZ(10px)`
+                    : "rotateX(0deg) rotateY(0deg) translateZ(0px)",
+                  transition: isHovered
+                    ? "transform 0.1s ease-out, box-shadow 0.3s ease-out"
+                    : "transform 0.5s ease-out, box-shadow 0.5s ease-out",
+                }}
+                className="pointer-events-auto animate-login-card relative h-full w-full overflow-x-hidden overflow-y-auto bg-[#0b1b32]/95 border-r border-slate-700/80 p-0 shadow-[10px_0_40px_rgba(0,0,0,0.5)] backdrop-blur-xl flex flex-col justify-between font-sans text-slate-300 hover:border-cyan-400/30 hover:shadow-[15px_0_40px_rgba(34,211,238,0.1)] no-scrollbar"
+              >
+                {/* SUBTLE CONTROLLED CURSOR SPOTLIGHT */}
+                <div
+                  className="pointer-events-none absolute -inset-px rounded-r-3xl opacity-0 transition-opacity duration-300 z-0"
+                  style={{
+                    opacity: isHovered ? 1 : 0,
+                    background: `radial-gradient(180px circle at ${mousePos.x}px ${mousePos.y}px, rgba(255, 255, 255, 0.06), transparent 80%)`,
+                  }}
+                />
 
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    type="button"
-                    className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                {/* SMALL BORDER HIGHLIGHT */}
+                <div
+                  className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 z-0"
+                  style={{
+                    opacity: isHovered ? 1 : 0,
+                    background: `radial-gradient(150px circle at ${mousePos.x}px ${mousePos.y}px, rgba(255, 255, 255, 0.2), transparent 100%)`,
+                    maskImage: "linear-gradient(#black, #black) content-box, linear-gradient(#black, #black)",
+                    maskComposite: "exclude",
+                    WebkitMaskComposite: "xor",
+                    padding: "1px",
+                  }}
+                />
+
+                {/* BACKGROUND BLUR SPHERES */}
+                <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
+                  <div className="absolute -left-20 -top-20 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />
+                  <div className="absolute -right-20 bottom-1/3 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl" />
                 </div>
 
-                <nav className="px-3 py-4">
-                  <div className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                    Clinical Navigation
-                  </div>
-
-                  <div className="space-y-1">
-                    {navigation.map((item, index) => {
-                      const Icon = item.icon;
-                      const isActive = location.pathname === item.path;
-
-                      return (
-                        <motion.div
-                          key={item.name}
-                          initial={{ opacity: 0, x: -15 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.03 * index, duration: 0.2, ease }}
-                        >
-                          <Link
-                            to={item.path}
-                            onClick={() => setIsOpen(false)}
-                            className={`group relative flex items-center justify-between overflow-hidden rounded-xl px-3 py-2.5 text-[11px] font-semibold transition-colors duration-200 ${
-                              isActive
-                                ? "text-white"
-                                : "text-slate-400 hover:bg-white/5 hover:text-white"
-                            }`}
-                          >
-                            {/* HORIZONTAL SPOTLIGHT EFFECT FOR ACTIVE ITEM */}
-                            {isActive && (
-                              <motion.div
-                                layoutId="sidebar-spotlight"
-                                className="absolute inset-0 pointer-events-none"
-                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                              >
-                                {/* Background fill */}
-                                <div className="absolute inset-0 bg-[#08679f]/30 backdrop-blur-xs" />
-
-                                {/* Left cap light strip */}
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-0.75 rounded-r-full bg-cyan-300 shadow-[0_0_12px_#22d3ee]" />
-
-                                {/* Horizontal spotlight cone beam emitting from the left strip */}
-                                <div
-                                  className="absolute inset-0 opacity-80"
-                                  style={{
-                                    background:
-                                      "radial-gradient(ellipse 100% 120% at 0% 50%, rgba(34, 211, 238, 0.35) 0%, rgba(8, 103, 159, 0.15) 50%, transparent 100%)",
-                                  }}
-                                />
-                              </motion.div>
-                            )}
-
-                            <div className="relative z-10 flex items-center gap-3">
-                              <Icon
-                                className={`h-4 w-4 transition-colors duration-200 ${
-                                  isActive
-                                    ? "text-cyan-300 drop-shadow-[0_0_6px_rgba(34,211,238,0.6)]"
-                                    : "text-slate-500 group-hover:text-cyan-400"
-                                }`}
-                              />
-                              <span>{item.name}</span>
-                            </div>
-
-                            {isActive && (
-                              <ChevronRight className="relative z-10 h-3.5 w-3.5 text-cyan-300/80" />
-                            )}
-                          </Link>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-
-                  {isAdmin && (
-                    <div className="mt-5 border-t border-white/5 pt-4">
-                      <div className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                        Administration
+                {/* TOP BRANDING & NAVIGATION */}
+                <div className="relative z-10 flex-1 overflow-y-auto no-scrollbar">
+                  <div className="border-b border-white/10 px-5 py-4 flex items-center justify-between bg-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-[#102844] text-cyan-400 shadow-sm">
+                        <Activity className="h-4 w-4" />
                       </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {/* Updated Text Below */}
+                          <h1 className="truncate text-xs font-bold tracking-tight text-white">
+                            Hospital Management System
+                          </h1>
+                          
+                        </div>
+                        <p className="mt-0.5 text-[9px] font-medium uppercase tracking-wider text-slate-400">
+                          HMS Portal
+                        </p>
+                      </div>
+                    </div>
 
-                      <div className="space-y-1">
-                        {adminNav.map((item) => {
-                          const Icon = item.icon;
-                          const isActive = location.pathname === item.path;
+                    <button
+                      onClick={() => setIsOpen(false)}
+                      type="button"
+                      className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
 
-                          return (
+                  <nav className="px-3 py-4">
+                    <div className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                      Clinical Navigation
+                    </div>
+
+                    <div className="space-y-1">
+                      {navigation.map((item, index) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.path;
+
+                        return (
+                          <motion.div
+                            key={item.name}
+                            initial={{ opacity: 0, x: -15 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.03 * index, duration: 0.2, ease }}
+                          >
                             <Link
-                              key={item.name}
                               to={item.path}
                               onClick={() => setIsOpen(false)}
-                              className={`group relative flex items-center justify-between overflow-hidden rounded-xl px-3 py-2.5 text-[11px] font-semibold transition-colors duration-200 ${
+                              className={`group relative flex items-center justify-between overflow-hidden rounded-xl px-3 py-2.5 text-[11px] font-semibold transition-all duration-200 ${
                                 isActive
-                                  ? "text-white"
-                                  : "text-slate-400 hover:bg-white/5 hover:text-white"
+                                  ? "text-white shadow-sm"
+                                  : "text-slate-300 hover:bg-white/10 hover:text-white"
                               }`}
                             >
                               {isActive && (
@@ -243,13 +243,13 @@ export default function Sidebar() {
                                   className="absolute inset-0 pointer-events-none"
                                   transition={{ type: "spring", stiffness: 380, damping: 30 }}
                                 >
-                                  <div className="absolute inset-0 bg-indigo-600/30 backdrop-blur-xs" />
-                                  <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-0.75 rounded-r-full bg-indigo-300 shadow-[0_0_12px_#818cf8]" />
+                                  <div className="absolute inset-0 bg-white/10 backdrop-blur-xs" />
+                                  <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-cyan-300 shadow-[0_0_8px_rgba(103,232,249,0.8)]" />
                                   <div
-                                    className="absolute inset-0 opacity-80"
+                                    className="absolute inset-0 opacity-60"
                                     style={{
                                       background:
-                                        "radial-gradient(ellipse 100% 120% at 0% 50%, rgba(129, 140, 248, 0.35) 0%, rgba(79, 70, 229, 0.15) 50%, transparent 100%)",
+                                        "radial-gradient(ellipse 90% 100% at 0% 50%, rgba(255, 255, 255, 0.15) 0%, rgba(34, 211, 238, 0.08) 50%, transparent 100%)",
                                     }}
                                   />
                                 </motion.div>
@@ -257,51 +257,144 @@ export default function Sidebar() {
 
                               <div className="relative z-10 flex items-center gap-3">
                                 <Icon
-                                  className={`h-4 w-4 ${
+                                  className={`h-4 w-4 transition-colors duration-200 ${
                                     isActive
-                                      ? "text-indigo-300 drop-shadow-[0_0_6px_rgba(129,140,248,0.6)]"
-                                      : "text-indigo-400 group-hover:text-indigo-300"
+                                      ? "text-cyan-300 drop-shadow-[0_0_5px_rgba(103,232,249,0.5)]"
+                                      : "text-slate-400 group-hover:text-cyan-300"
                                   }`}
                                 />
                                 <span>{item.name}</span>
                               </div>
+
+                              {isActive && (
+                                <ChevronRight className="relative z-10 h-3.5 w-3.5 text-cyan-300/90" />
+                              )}
                             </Link>
-                          );
-                        })}
-                      </div>
+                          </motion.div>
+                        );
+                      })}
                     </div>
-                  )}
-                </nav>
-              </div>
 
-              {/* CLEAN FOOTER */}
-              <div className="border-t border-white/5 p-3 bg-[#081527]">
-                <Link
-                  to="/settings"
-                  onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[11px] font-semibold transition-all duration-200 ${
-                    location.pathname === "/settings"
-                      ? "bg-white/10 text-white"
-                      : "text-slate-400 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <Settings className="h-4 w-4 text-slate-500" />
-                  <span>Settings</span>
-                </Link>
+                    {isAdmin && (
+                      <div className="mt-5 border-t border-white/10 pt-4">
+                        <div className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                          Administration
+                        </div>
 
-                <div className="mt-2.5 rounded-xl border border-emerald-400/10 bg-emerald-400/5 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                    <span className="text-[9px] font-bold text-emerald-400">
-                      System Operational
-                    </span>
+                        <div className="space-y-1">
+                          {adminNav.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = location.pathname === item.path;
+
+                            return (
+                              <Link
+                                key={item.name}
+                                to={item.path}
+                                onClick={() => setIsOpen(false)}
+                                className={`group relative flex items-center justify-between overflow-hidden rounded-xl px-3 py-2.5 text-[11px] font-semibold transition-colors duration-200 ${
+                                  isActive
+                                    ? "text-white"
+                                    : "text-slate-300 hover:bg-white/10 hover:text-white"
+                                }`}
+                              >
+                                {isActive && (
+                                  <motion.div
+                                    layoutId="sidebar-spotlight"
+                                    className="absolute inset-0 pointer-events-none"
+                                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                  >
+                                    <div className="absolute inset-0 bg-white/10 backdrop-blur-xs" />
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-indigo-300 shadow-[0_0_8px_rgba(165,180,252,0.8)]" />
+                                    <div
+                                      className="absolute inset-0 opacity-60"
+                                      style={{
+                                        background:
+                                          "radial-gradient(ellipse 90% 100% at 0% 50%, rgba(255, 255, 255, 0.15) 0%, rgba(129, 140, 248, 0.08) 50%, transparent 100%)",
+                                      }}
+                                    />
+                                  </motion.div>
+                                )}
+
+                                <div className="relative z-10 flex items-center gap-3">
+                                  <Icon
+                                    className={`h-4 w-4 ${
+                                      isActive
+                                        ? "text-indigo-300 drop-shadow-[0_0_5px_rgba(165,180,252,0.5)]"
+                                        : "text-indigo-400 group-hover:text-indigo-300"
+                                    }`}
+                                  />
+                                  <span>{item.name}</span>
+                                </div>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </nav>
+                </div>
+
+                {/* CLEAN FOOTER */}
+                <div className="relative z-10 shrink-0 border-t border-white/10 p-3 bg-[#081527]/80 backdrop-blur-md">
+                  <Link
+                    to="/settings"
+                    onClick={() => setIsOpen(false)}
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[11px] font-semibold transition-all duration-200 ${
+                      location.pathname === "/settings"
+                        ? "bg-white/10 text-white"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <Settings className="h-4 w-4 text-slate-400" />
+                    <span>Settings</span>
+                  </Link>
+
+                  <div className="mt-2.5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                      <span className="text-[9px] font-bold text-emerald-400">
+                        System Operational
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.aside>
+              </motion.aside>
+            </div>
           </>
         )}
       </AnimatePresence>
+
+      {/* Embedded Styles to Hide Scrollbars cleanly */}
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        @keyframes loginCardIn {
+          from {
+            opacity: 0;
+            transform: translateY(12px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .animate-login-card {
+          animation: loginCardIn 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .animate-login-card {
+            animation: none;
+          }
+        }
+      `}</style>
     </>
   );
 }
