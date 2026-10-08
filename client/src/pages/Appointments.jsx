@@ -1,19 +1,15 @@
 // ==========================================================
-// REACT
+// REACT & ROUTER
 // ==========================================================
 
 import { useState } from "react";
-
-// ==========================================================
-// REACT ROUTER
-// ==========================================================
-
 import { Link } from "react-router-dom";
 
 // ==========================================================
 // COMPONENTS
 // ==========================================================
 
+import Sidebar from "../components/Sidebar.jsx";
 import AppointmentList from "../components/AppointmentList";
 import AddAppointmentForm from "../components/AddAppointmentForm";
 
@@ -60,7 +56,16 @@ function Appointments() {
   // ==========================================================
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+    <div className="relative min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+      {/* =====================================================
+          VERTICALLY CENTERED CIRCULAR MENU OVERRIDE CONTAINER
+          Overrides the floating button position & shape without
+          modifying any code inside Sidebar.jsx
+      ====================================================== */}
+      <div className="[&>button]:fixed! [&>button]:top-1/2! [&>button]:left-2! [&>button]:-translate-y-1/2! [&>button]:z-99! [&>button]:h-12! [&>button]:w-12! [&>button]:p-0! [&>button]:justify-center! [&>button]:rounded-full! [&>button]:shadow-xl! [&>button]:bg-[#0b1b32]! [&>button_span]:hidden!">
+        <Sidebar />
+      </div>
+
       <div className="max-w-7xl mx-auto space-y-6">
         {/* TOP BAR */}
 

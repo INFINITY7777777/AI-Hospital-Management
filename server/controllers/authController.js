@@ -17,14 +17,12 @@ const registerUser = async (req, res) => {
       experience
     } = req.body;
 
-    // Check required fields
     if (!full_name || !email || !password || !mpin || !role) {
       return res.status(400).json({
         message: "Please fill all required fields."
       });
     }
 
-    // Check if email already exists
     const existingUser = await db.query(
       "SELECT id FROM users WHERE email = $1",
       [email]
@@ -36,13 +34,9 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Hash Password
     const passwordHash = await bcrypt.hash(password, 10);
-
-    // Hash MPIN
     const mpinHash = await bcrypt.hash(mpin, 10);
 
-    // Insert User - Target exact columns present in 'users' table schema
     const result = await db.query(
       `
       INSERT INTO users
@@ -59,12 +53,7 @@ const registerUser = async (req, res) => {
       )
       VALUES
       ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-
-      RETURNING
-        id,
-        full_name,
-        email,
-        role;
+      RETURNING id, full_name, email, role, department, phone;
       `,
       [
         full_name,
@@ -81,7 +70,6 @@ const registerUser = async (req, res) => {
 
     const newUser = result.rows[0];
 
-    // AUTOMATIC SYNCHRONIZATION: Insert into 'doctors' table if role is Doctor
     if (String(role).toLowerCase().trim() === "doctor") {
       try {
         await db.query(
@@ -117,14 +105,72 @@ const registerUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Register Error:", error);
     res.status(500).json({
       message: "Internal Server Error"
     });
   }
 };
 
-// Code for User Login 
+const adminCreateUser = async (req, res) => {
+  try {
+    const { full_name, email, password, role, department, phone, specialization } = req.body;
+
+    if (!full_name || !email || !password || !role) {
+      return res.status(400).json({ error: "Full name, email, password, and role are required." });
+    }
+
+    const existingUser = await db.query("SELECT id FROM users WHERE email = $1", [email]);
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({ error: "A user with this email already exists." });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const defaultMpinHash = await bcrypt.hash("1234", 10);
+
+    const result = await db.query(
+      `
+      INSERT INTO users (full_name, email, password, mpin_hash, role, department, phone, specialization)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, full_name, email, role, department, phone;
+      `,
+      [
+        full_name,
+        email,
+        passwordHash,
+        defaultMpinHash,
+        role,
+        department || "General",
+        phone || null,
+        specialization || null
+      ]
+    );
+
+    const newUser = result.rows[0];
+
+    if (String(role).toLowerCase().trim() === "doctor") {
+      try {
+        await db.query(
+          `INSERT INTO doctors (doctor_name, specialization, phone, email, department)
+           VALUES ($1, $2, $3, $4, $5);`,
+          [full_name, specialization || "General Physician", phone || null, email, department || "General"]
+        );
+      } catch (err) {
+        console.error("[Doctor Sync Error]:", err.message);
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Staff user created successfully.",
+      user: newUser
+    });
+  } catch (error) {
+    console.error("Admin Create User Error:", error);
+    return res.status(500).json({ error: "Failed to create user account." });
+  }
+};
+
 const loginUser = async (req, res) => {
   try {
     const { email, password, mpin } = req.body;
@@ -152,7 +198,6 @@ const loginUser = async (req, res) => {
 
     let isAuthorized = false;
 
-    // Check MPIN if provided
     if (mpin) {
       if (!user.mpin_hash) {
         return res.status(400).json({
@@ -160,9 +205,7 @@ const loginUser = async (req, res) => {
         });
       }
       isAuthorized = await bcrypt.compare(mpin, user.mpin_hash);
-    } 
-    // Check Password fallback
-    else if (password) {
+    } else if (password) {
       isAuthorized = await bcrypt.compare(password, user.password);
     }
 
@@ -196,9 +239,6 @@ const loginUser = async (req, res) => {
   }
 };
 
-// --------------------------------------------------
-// CHANGE PASSWORD (SELF)
-// --------------------------------------------------
 const updatePassword = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -237,9 +277,6 @@ const updatePassword = async (req, res) => {
   }
 };
 
-// --------------------------------------------------
-// UPDATE OR SET MPIN (SELF - WITH CURRENT MPIN VERIFICATION)
-// --------------------------------------------------
 const updateMpin = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -260,7 +297,6 @@ const updateMpin = async (req, res) => {
 
     const user = userRes.rows[0];
 
-    // If MPIN is already enabled, require current MPIN verification
     if (user.is_mpin_enabled && user.mpin_hash) {
       if (!currentMpin) {
         return res.status(400).json({ error: "Current MPIN is required to set a new one." });
@@ -292,9 +328,6 @@ const updateMpin = async (req, res) => {
   }
 };
 
-// --------------------------------------------------
-// ADMIN RESET USER PASSWORD (FORGOTTEN PASSWORD WORKFLOW)
-// --------------------------------------------------
 const adminResetUserPassword = async (req, res) => {
   try {
     const { targetUserId, tempPassword } = req.body;
@@ -330,9 +363,9 @@ const adminResetUserPassword = async (req, res) => {
 
 module.exports = {
   registerUser,
+  adminCreateUser,
   loginUser,
   updatePassword,
   updateMpin,
   adminResetUserPassword,
-  
 };

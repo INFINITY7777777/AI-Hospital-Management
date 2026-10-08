@@ -94,7 +94,7 @@ const getTodayAppointments = async (req, res) => {
     const result = await db.query(
       `SELECT 
           appointments.id,
-          appointments.appointment_date,
+          TO_CHAR(appointments.appointment_date, 'YYYY-MM-DD') AS appointment_date,
           appointments.appointment_time,
           appointments.reason,
           appointments.status,
@@ -124,7 +124,7 @@ const getUpcomingAppointments = async (req, res) => {
     const result = await db.query(
       `SELECT 
           appointments.id,
-          appointments.appointment_date,
+          TO_CHAR(appointments.appointment_date, 'DD/MM/YYYY') AS appointment_date,
           appointments.appointment_time,
           appointments.reason,
           appointments.status,
@@ -175,7 +175,6 @@ const getBedOccupancySummary = async (req, res) => {
 // Returns appointment traffic for the selected week
 // Supported periods: this_week, last_week
 // ==========================================================
-
 const getPatientTrends = async (req, res) => {
   try {
     const { period = "this_week" } = req.query;
@@ -257,5 +256,4 @@ module.exports = {
   getUpcomingAppointments,
   getBedOccupancySummary,
   getPatientTrends,
-  
 };

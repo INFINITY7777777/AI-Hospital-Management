@@ -2,14 +2,15 @@
 // REACT & ROUTER
 // ==========================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 // ==========================================================
-// SERVICES
+// SERVICES & COMPONENTS
 // ==========================================================
 
 import api from "../services/api";
+import MedicalPlusBackground from "../components/MedicalPlusBackground";
 
 // ==========================================================
 // SUB-COMPONENTS
@@ -43,6 +44,49 @@ function PatientDetails() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+
+  // 3D Tilt & Spotlight Hover Animation States
+  const heroCardRef = useRef(null);
+  const [heroMousePos, setHeroMousePos] = useState({ x: 0, y: 0 });
+  const [heroCardRotate, setHeroCardRotate] = useState({ x: 0, y: 0 });
+  const [isHeroHovered, setIsHeroHovered] = useState(false);
+
+  const handleMouseMoveHeroCard = (e) => {
+    if (!heroCardRef.current) return;
+    const rect = heroCardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setHeroMousePos({ x, y });
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -4;
+    const rotateY = ((x - centerX) / centerX) * 4;
+
+    setHeroCardRotate({ x: rotateX, y: rotateY });
+  };
+
+  const actionCardRef = useRef(null);
+  const [actionMousePos, setActionMousePos] = useState({ x: 0, y: 0 });
+  const [actionCardRotate, setActionCardRotate] = useState({ x: 0, y: 0 });
+  const [isActionHovered, setIsActionHovered] = useState(false);
+
+  const handleMouseMoveActionCard = (e) => {
+    if (!actionCardRef.current) return;
+    const rect = actionCardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setActionMousePos({ x, y });
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -3;
+    const rotateY = ((x - centerX) / centerX) * 3;
+
+    setActionCardRotate({ x: rotateX, y: rotateY });
+  };
 
   // -------------------------------------------------------------------------
   // Fetch Patient Details
@@ -154,18 +198,30 @@ function PatientDetails() {
   // -------------------------------------------------------------------------
   if (loading) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
-        <div className="bg-white rounded-[22px] border border-slate-200/80 p-8 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-          <div className="animate-pulse space-y-6">
-            <div className="h-6 bg-slate-200 rounded-lg w-40"></div>
-            <div className="h-9 bg-slate-200 rounded-lg w-72"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((item) => (
-                <div
-                  key={item}
-                  className="h-16 bg-slate-100 rounded-xl"
-                ></div>
-              ))}
+      <div className="relative min-h-screen overflow-hidden bg-[#F6F8FC] font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+        <MedicalPlusBackground />
+
+        {/* Background decoration */}
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#08679F]/10 blur-3xl" />
+          <div className="absolute -right-32 top-1/4 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+          <div className="absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
+          <div className="absolute inset-0 bg-linear-to-br from-white/70 via-[#F6F8FC]/60 to-[#F8FAFC]/80" />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto space-y-6">
+          <div className="bg-white/80 backdrop-blur-xl rounded-[22px] border border-slate-200/80 p-8 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+            <div className="animate-pulse space-y-6">
+              <div className="h-6 bg-slate-200 rounded-lg w-40"></div>
+              <div className="h-9 bg-slate-200 rounded-lg w-72"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <div
+                    key={item}
+                    className="h-16 bg-slate-100 rounded-xl"
+                  ></div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -178,25 +234,37 @@ function PatientDetails() {
   // -------------------------------------------------------------------------
   if (error || !patient) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-        <div className="bg-white rounded-[22px] border border-rose-200 p-8 shadow-[0_8px_30px_rgba(15,23,42,0.04)] text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 mb-4">
-            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-            </svg>
+      <div className="relative min-h-screen overflow-hidden bg-[#F6F8FC] font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+        <MedicalPlusBackground />
+
+        {/* Background decoration */}
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#08679F]/10 blur-3xl" />
+          <div className="absolute -right-32 top-1/4 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+          <div className="absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
+          <div className="absolute inset-0 bg-linear-to-br from-white/70 via-[#F6F8FC]/60 to-[#F8FAFC]/80" />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto">
+          <div className="bg-white/80 backdrop-blur-xl rounded-[22px] border border-rose-200 p-8 shadow-[0_8px_30px_rgba(15,23,42,0.04)] text-center">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 mb-4">
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900 mb-2">
+              Unable to Load Patient
+            </h1>
+            <p className="text-sm text-rose-600 mb-6 font-medium">
+              {error || "Patient not found."}
+            </p>
+            <button
+              onClick={() => navigate("/patients")}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+            >
+              ← Back to Patients
+            </button>
           </div>
-          <h1 className="text-xl font-bold text-slate-900 mb-2">
-            Unable to Load Patient
-          </h1>
-          <p className="text-sm text-rose-600 mb-6 font-medium">
-            {error || "Patient not found."}
-          </p>
-          <button
-            onClick={() => navigate("/patients")}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
-          >
-            ← Back to Patients
-          </button>
         </div>
       </div>
     );
@@ -220,210 +288,309 @@ function PatientDetails() {
   // Primary Render
   // -------------------------------------------------------------------------
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
-      {/* HEADER ACTIONS */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <button
-          onClick={() => navigate("/patients")}
-          className="
-            inline-flex items-center gap-2 h-10 px-4 rounded-xl
-            border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-700
-            shadow-sm transition-all duration-150 hover:bg-slate-50 hover:border-slate-300
-            active:scale-[0.98]
-          "
-        >
-          <svg className="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-          </svg>
-          Back to Patients
-        </button>
+    <div className="relative min-h-screen overflow-hidden bg-[#F6F8FC] font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+      {/* Interactive Medical + Canvas Hover Effect */}
+      <MedicalPlusBackground />
 
-        <button
-          onClick={() => setIsAlertModalOpen(true)}
-          className="
-            inline-flex items-center gap-2 h-10 px-4 rounded-xl
-            bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold
-            shadow-md shadow-rose-600/20 transition-all duration-150
-            hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]
-          "
-        >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM12 3a9 9 0 100 18 9 9 0 000-18z" />
-          </svg>
-          Raise Patient Alert
-        </button>
+      {/* Background decoration */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#08679F]/10 blur-3xl" />
+        <div className="absolute -right-32 top-1/4 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="absolute inset-0 bg-linear-to-br from-white/70 via-[#F6F8FC]/60 to-[#F8FAFC]/80" />
       </div>
 
-      {/* PATIENT IDENTITY HERO HEADER */}
-      <div className="bg-white rounded-[22px] border border-slate-200/80 p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+      <div className="relative z-10 max-w-6xl mx-auto space-y-6">
+        {/* HEADER ACTIONS */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                {patientDisplayName}
-              </h1>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#08679F]/10 text-[#08679F]">
-                ID: #{patient.id}
-              </span>
-            </div>
+          <button
+            onClick={() => navigate("/patients")}
+            className="
+              inline-flex items-center gap-2 h-10 px-4 rounded-xl
+              border border-slate-200 bg-white/80 text-xs sm:text-sm font-semibold text-slate-700
+              shadow-sm backdrop-blur-md transition-all duration-150 hover:bg-slate-50 hover:border-slate-300
+              active:scale-[0.98]
+            "
+          >
+            <svg className="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+            Back to Patients
+          </button>
 
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm font-medium text-slate-500 pt-1">
-              {patient.age && <span>Age: <strong className="text-slate-800">{patient.age}</strong></span>}
-              {patient.gender && <span>Gender: <strong className="text-slate-800">{patient.gender}</strong></span>}
-              {patient.blood_group && (
-                <span>Blood Group: <strong className="text-rose-600 font-bold">{patient.blood_group}</strong></span>
-              )}
+          <button
+            onClick={() => setIsAlertModalOpen(true)}
+            className="
+              inline-flex items-center gap-2 h-10 px-4 rounded-xl
+              bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold
+              shadow-md shadow-rose-600/20 transition-all duration-150
+              hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]
+            "
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM12 3a9 9 0 100 18 9 9 0 000-18z" />
+            </svg>
+            Raise Patient Alert
+          </button>
+        </div>
+
+        {/* PATIENT IDENTITY HERO HEADER WITH 3D PERSPECTIVE */}
+        <div className="perspective-[1000px]">
+          <div
+            ref={heroCardRef}
+            onMouseMove={handleMouseMoveHeroCard}
+            onMouseEnter={() => setIsHeroHovered(true)}
+            onMouseLeave={() => {
+              setIsHeroHovered(false);
+              setHeroCardRotate({ x: 0, y: 0 });
+            }}
+            style={{
+              transform: isHeroHovered
+                ? `rotateX(${heroCardRotate.x}deg) rotateY(${heroCardRotate.y}deg) translateZ(10px)`
+                : "rotateX(0deg) rotateY(0deg) translateZ(0px)",
+              transition: isHeroHovered
+                ? "transform 0.1s ease-out, box-shadow 0.3s ease-out"
+                : "transform 0.5s ease-out, box-shadow 0.5s ease-out",
+            }}
+            className="relative overflow-hidden bg-white/80 rounded-[22px] border border-slate-200/80 p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl transition-colors duration-200 hover:border-[#08679F]/40 hover:shadow-[0_20px_50px_rgba(8,103,159,0.12)]"
+          >
+            {/* Dynamic Spotlight Glow effect inside Hero Header Card */}
+            <div
+              className="pointer-events-none absolute -inset-px rounded-[22px] opacity-0 transition-opacity duration-300"
+              style={{
+                opacity: isHeroHovered ? 1 : 0,
+                background: `radial-gradient(600px circle at ${heroMousePos.x}px ${heroMousePos.y}px, rgba(8, 103, 159, 0.08), transparent 80%)`,
+              }}
+            />
+
+            {/* Border Light Highlight */}
+            <div
+              className="pointer-events-none absolute -inset-px rounded-[22px] opacity-0 transition-opacity duration-300"
+              style={{
+                opacity: isHeroHovered ? 1 : 0,
+                background: `radial-gradient(400px circle at ${heroMousePos.x}px ${heroMousePos.y}px, rgba(8, 103, 159, 0.25), transparent 100%)`,
+                maskImage:
+                  "linear-gradient(#black, #black) content-box, linear-gradient(#black, #black)",
+                maskComposite: "exclude",
+                WebkitMaskComposite: "xor",
+                padding: "1px",
+              }}
+            />
+
+            <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                    {patientDisplayName}
+                  </h1>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#08679F]/10 text-[#08679F]">
+                    ID: #{patient.id}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm font-medium text-slate-500 pt-1">
+                  {patient.age && <span>Age: <strong className="text-slate-800">{patient.age}</strong></span>}
+                  {patient.gender && <span>Gender: <strong className="text-slate-800">{patient.gender}</strong></span>}
+                  {patient.blood_group && (
+                    <span>Blood Group: <strong className="text-rose-600 font-bold">{patient.blood_group}</strong></span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200/60">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Active Record
+                </span>
+              </div>
             </div>
           </div>
-
-          <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200/60">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Active Record
-            </span>
-          </div>
         </div>
-      </div>
 
-      {/* SEGMENTED TAB NAVIGATION */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-1.5 shadow-[0_4px_20px_rgba(15,23,42,0.02)]">
-        <div className="flex flex-wrap gap-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`
-                px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150
-                ${
-                  activeTab === tab.id
-                    ? "bg-[#08679F] text-white shadow-md shadow-[#08679F]/20"
-                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
-                }
-              `}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* TAB CONTENT: OVERVIEW */}
-      {activeTab === "overview" && (
-        <div className="space-y-6">
-          <DigitalPatientCard patient={patient} />
-
-          <div className="bg-white rounded-[22px] border border-slate-200/80 p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-4">
-              Patient Record Actions
-            </h2>
-
-            <div className="flex flex-wrap gap-3">
+        {/* SEGMENTED TAB NAVIGATION */}
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 p-1.5 shadow-[0_4px_20px_rgba(15,23,42,0.02)]">
+          <div className="flex flex-wrap gap-1">
+            {tabs.map((tab) => (
               <button
-                onClick={() => navigate(`/patients/${patient.id}/edit`)}
-                className="
-                  inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl
-                  bg-[#08679F] hover:bg-[#07557F] text-white text-xs sm:text-sm font-semibold
-                  shadow-md shadow-[#08679F]/20 transition-all duration-150
-                  hover:-translate-y-0.5 active:translate-y-0
-                "
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`
+                  px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150
+                  ${
+                    activeTab === tab.id
+                      ? "bg-[#08679F] text-white shadow-md shadow-[#08679F]/20"
+                      : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
+                  }
+                `}
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                </svg>
-                Edit Patient
+                {tab.label}
               </button>
+            ))}
+          </div>
+        </div>
 
-              <button
-                onClick={handleDeletePatient}
-                disabled={deleting}
-                className="
-                  inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl
-                  border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700
-                  text-xs sm:text-sm font-semibold transition-all duration-150
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                "
+        {/* TAB CONTENT: OVERVIEW */}
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            <DigitalPatientCard patient={patient} />
+
+            <div className="perspective-[1000px]">
+              <div
+                ref={actionCardRef}
+                onMouseMove={handleMouseMoveActionCard}
+                onMouseEnter={() => setIsActionHovered(true)}
+                onMouseLeave={() => {
+                  setIsActionHovered(false);
+                  setActionCardRotate({ x: 0, y: 0 });
+                }}
+                style={{
+                  transform: isActionHovered
+                    ? `rotateX(${actionCardRotate.x}deg) rotateY(${actionCardRotate.y}deg) translateZ(10px)`
+                    : "rotateX(0deg) rotateY(0deg) translateZ(0px)",
+                  transition: isActionHovered
+                    ? "transform 0.1s ease-out, box-shadow 0.3s ease-out"
+                    : "transform 0.5s ease-out, box-shadow 0.5s ease-out",
+                }}
+                className="relative overflow-hidden bg-white/80 rounded-[22px] border border-slate-200/80 p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl transition-colors duration-200 hover:border-[#08679F]/40 hover:shadow-[0_20px_50px_rgba(8,103,159,0.12)]"
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                </svg>
-                {deleting ? "Deleting..." : "Delete Patient"}
-              </button>
+                {/* Dynamic Spotlight Glow effect inside Action Card */}
+                <div
+                  className="pointer-events-none absolute -inset-px rounded-[22px] opacity-0 transition-opacity duration-300"
+                  style={{
+                    opacity: isActionHovered ? 1 : 0,
+                    background: `radial-gradient(600px circle at ${actionMousePos.x}px ${actionMousePos.y}px, rgba(8, 103, 159, 0.08), transparent 80%)`,
+                  }}
+                />
+
+                {/* Border Light Highlight */}
+                <div
+                  className="pointer-events-none absolute -inset-px rounded-[22px] opacity-0 transition-opacity duration-300"
+                  style={{
+                    opacity: isActionHovered ? 1 : 0,
+                    background: `radial-gradient(400px circle at ${actionMousePos.x}px ${actionMousePos.y}px, rgba(8, 103, 159, 0.25), transparent 100%)`,
+                    maskImage:
+                      "linear-gradient(#black, #black) content-box, linear-gradient(#black, #black)",
+                    maskComposite: "exclude",
+                    WebkitMaskComposite: "xor",
+                    padding: "1px",
+                  }}
+                />
+
+                <div className="relative z-10">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-4">
+                    Patient Record Actions
+                  </h2>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => navigate(`/patients/${patient.id}/edit`)}
+                      className="
+                        inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl
+                        bg-[#08679F] hover:bg-[#07557F] text-white text-xs sm:text-sm font-semibold
+                        shadow-md shadow-[#08679F]/20 transition-all duration-150
+                        hover:-translate-y-0.5 active:translate-y-0
+                      "
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                      </svg>
+                      Edit Patient
+                    </button>
+
+                    <button
+                      onClick={handleDeletePatient}
+                      disabled={deleting}
+                      className="
+                        inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl
+                        border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700
+                        text-xs sm:text-sm font-semibold transition-all duration-150
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                      "
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                      </svg>
+                      {deleting ? "Deleting..." : "Delete Patient"}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* TAB CONTENT: CLINICAL NOTES */}
-      {activeTab === "notes" && (
-        <div className="space-y-6">
-          <div className="pb-2 border-b border-slate-200/80">
-            <h2 className="text-lg font-bold text-slate-900">
-              Clinical Notes
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Clinical notes, daily observations, and doctor assessments for this patient.
-            </p>
+        {/* TAB CONTENT: CLINICAL NOTES */}
+        {activeTab === "notes" && (
+          <div className="space-y-6">
+            <div className="pb-2 border-b border-slate-200/80">
+              <h2 className="text-lg font-bold text-slate-900">
+                Clinical Notes
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Clinical notes, daily observations, and doctor assessments for this patient.
+              </p>
+            </div>
+            <ClinicalNotes patientId={patient.id} />
           </div>
-          <ClinicalNotes patientId={patient.id} />
-        </div>
-      )}
+        )}
 
-      {/* TAB CONTENT: MEDICAL HISTORY */}
-      {activeTab === "history" && (
-        <div className="space-y-6">
-          <div className="pb-2 border-b border-slate-200/80">
-            <h2 className="text-lg font-bold text-slate-900">
-              Medical History
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Medical history, past conditions, and recorded clinical events.
-            </p>
+        {/* TAB CONTENT: MEDICAL HISTORY */}
+        {activeTab === "history" && (
+          <div className="space-y-6">
+            <div className="pb-2 border-b border-slate-200/80">
+              <h2 className="text-lg font-bold text-slate-900">
+                Medical History
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Medical history, past conditions, and recorded clinical events.
+              </p>
+            </div>
+            <PatientMedicalHistory patientId={patient.id} />
           </div>
-          <PatientMedicalHistory patientId={patient.id} />
-        </div>
-      )}
+        )}
 
-      {/* TAB CONTENT: STAY HISTORY */}
-      {activeTab === "stays" && (
-        <div className="space-y-6">
-          <div className="pb-2 border-b border-slate-200/80">
-            <h2 className="text-lg font-bold text-slate-900">
-              Stay History
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Ward allocations, bed transfer logs, and stay history for this patient.
-            </p>
+        {/* TAB CONTENT: STAY HISTORY */}
+        {activeTab === "stays" && (
+          <div className="space-y-6">
+            <div className="pb-2 border-b border-slate-200/80">
+              <h2 className="text-lg font-bold text-slate-900">
+                Stay History
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Ward allocations, bed transfer logs, and stay history for this patient.
+              </p>
+            </div>
+            <PatientStayHistory patientId={patient.id} />
           </div>
-          <PatientStayHistory patientId={patient.id} />
-        </div>
-      )}
+        )}
 
-      {/* TAB CONTENT: AI ASSISTANT */}
-      {activeTab === "ai" && (
-        <PatientAIChat
+        {/* TAB CONTENT: AI ASSISTANT */}
+        {activeTab === "ai" && (
+          <PatientAIChat
+            patientId={patient.id}
+            patientName={patientDisplayName}
+          />
+        )}
+
+        {/* TAB CONTENT: AI REPORTS */}
+        {activeTab === "reports" && (
+          <PatientAiSummary
+            patientId={patient.id}
+            patientName={patientDisplayName}
+          />
+        )}
+
+        {/* EMERGENCY NOTIFICATION MODAL */}
+        <RaiseAlertModal
+          isOpen={isAlertModalOpen}
+          onClose={() => setIsAlertModalOpen(false)}
           patientId={patient.id}
           patientName={patientDisplayName}
+          onAlertSent={() => {
+            alert("Critical notification sent to all active team members.");
+          }}
         />
-      )}
-
-      {/* TAB CONTENT: AI REPORTS */}
-      {activeTab === "reports" && (
-        <PatientAiSummary
-          patientId={patient.id}
-          patientName={patientDisplayName}
-        />
-      )}
-
-      {/* EMERGENCY NOTIFICATION MODAL */}
-      <RaiseAlertModal
-        isOpen={isAlertModalOpen}
-        onClose={() => setIsAlertModalOpen(false)}
-        patientId={patient.id}
-        patientName={patientDisplayName}
-        onAlertSent={() => {
-          alert("Critical notification sent to all active team members.");
-        }}
-      />
+      </div>
     </div>
   );
 }

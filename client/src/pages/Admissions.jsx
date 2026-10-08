@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "../services/api";
 import { useNavigate, Link } from "react-router-dom";
+import Sidebar from "../components/Sidebar.jsx";
 
 function Admissions() {
   const navigate = useNavigate();
@@ -142,7 +143,14 @@ function Admissions() {
   // ==========================================================
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F6F8FC] font-sans antialiased text-slate-900">
+      <div className="relative min-h-screen bg-[#F6F8FC] font-sans antialiased text-slate-900">
+        {/* =====================================================
+            VERTICALLY CENTERED CIRCULAR MENU OVERRIDE CONTAINER
+        ====================================================== */}
+        <div className="[&>button]:fixed! [&>button]:top-1/2! [&>button]:left-2! [&>button]:-translate-y-1/2! [&>button]:z-99! [&>button]:h-12! [&>button]:w-12! [&>button]:p-0! [&>button]:justify-center! [&>button]:rounded-full! [&>button]:shadow-xl! [&>button]:bg-[#0b1b32]! [&>button_span]:hidden!">
+          <Sidebar />
+        </div>
+
         <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
           <div className="h-9 w-40 bg-slate-200/80 rounded-xl animate-pulse" />
           <div className="flex justify-between items-center border-b border-slate-200/80 pb-5">
@@ -163,7 +171,16 @@ function Admissions() {
   // MAIN RENDER
   // ==========================================================
   return (
-    <div className="min-h-screen bg-[#F6F8FC] font-sans antialiased text-slate-900">
+    <div className="relative min-h-screen bg-[#F6F8FC] font-sans antialiased text-slate-900">
+      {/* =====================================================
+          VERTICALLY CENTERED CIRCULAR MENU OVERRIDE CONTAINER
+          Overrides the floating button position & shape without
+          modifying any code inside Sidebar.jsx
+      ====================================================== */}
+      <div className="[&>button]:fixed! [&>button]:top-1/2! [&>button]:left-2! [&>button]:-translate-y-1/2! [&>button]:z-99! [&>button]:h-12! [&>button]:w-12! [&>button]:p-0! [&>button]:justify-center! [&>button]:rounded-full! [&>button]:shadow-xl! [&>button]:bg-[#0b1b32]! [&>button_span]:hidden!">
+        <Sidebar />
+      </div>
+
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         {/* =====================================================
             BACK TO DASHBOARD
@@ -233,7 +250,7 @@ function Admissions() {
         </div>
 
         {/* =====================================================
-            SEARCH + FILTER CONTROLS (PATIENTS.JSX STYLE)
+            SEARCH + FILTER CONTROLS
         ====================================================== */}
         <div className="rounded-[22px] border border-slate-200/80 bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
           {/* SEARCH INPUT */}
@@ -357,7 +374,7 @@ function Admissions() {
         )}
 
         {/* =====================================================
-            ADMISSIONS LIST (PATIENTS.JSX CONTAINER STYLE)
+            ADMISSIONS LIST
         ====================================================== */}
         <div className="overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
           {filteredAdmissions.length === 0 ? (

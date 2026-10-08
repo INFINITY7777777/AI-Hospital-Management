@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
+import Sidebar from "../components/Sidebar.jsx";
 
 function BedList() {
   const navigate = useNavigate();
@@ -109,7 +110,6 @@ function BedList() {
     try {
       setActionLoading(true);
 
-      // Ensure payload matches backend expectations (both camelCase and snake_case provided, or URL parameter used)
       await api.put(`/beds/${selectedBed.id}/assign`, {
         patient_id: Number(selectedPatientId),
         patientId: Number(selectedPatientId),
@@ -211,7 +211,14 @@ function BedList() {
   // ==========================================================
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+      <div className="relative min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+        {/* =====================================================
+            VERTICALLY CENTERED CIRCULAR MENU OVERRIDE CONTAINER
+        ====================================================== */}
+        <div className="[&>button]:fixed! [&>button]:top-1/2! [&>button]:left-2! [&>button]:-translate-y-1/2! [&>button]:z-99! [&>button]:h-12! [&>button]:w-12! [&>button]:p-0! [&>button]:justify-center! [&>button]:rounded-full! [&>button]:shadow-xl! [&>button]:bg-[#0b1b32]! [&>button_span]:hidden!">
+          <Sidebar />
+        </div>
+
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="h-9 w-48 bg-slate-200/80 rounded-xl animate-pulse"></div>
           <div className="border-b border-slate-200/80 pb-5">
@@ -233,7 +240,16 @@ function BedList() {
   // MAIN UI
   // ==========================================================
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+    <div className="relative min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900 p-4 sm:p-6 lg:p-8">
+      {/* =====================================================
+          VERTICALLY CENTERED CIRCULAR MENU OVERRIDE CONTAINER
+          Overrides the floating button position & shape without
+          modifying any code inside Sidebar.jsx
+      ====================================================== */}
+      <div className="[&>button]:fixed! [&>button]:top-1/2! [&>button]:left-2! [&>button]:-translate-y-1/2! [&>button]:z-99! [&>button]:h-12! [&>button]:w-12! [&>button]:p-0! [&>button]:justify-center! [&>button]:rounded-full! [&>button]:shadow-xl! [&>button]:bg-[#0b1b32]! [&>button_span]:hidden!">
+        <Sidebar />
+      </div>
+
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Top Bar: Back to Dashboard Button */}
         <div className="flex items-center justify-between">
@@ -463,7 +479,7 @@ function BedList() {
                               </div>
                             </div>
 
-                            {/* ACTIONS (ALIGNED TO UI MASTER PLAN) */}
+                            {/* ACTIONS */}
                             <div className="flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-slate-200/50">
                               <button
                                 onClick={() => navigate(`/beds/${bed.id}`)}

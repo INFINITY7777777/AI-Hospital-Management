@@ -1,4 +1,3 @@
-
 // server/index.js
 
 const express = require("express");
@@ -23,6 +22,7 @@ const routeModules = {
     notificationRoutes: require("./routes/notificationRoutes"),
     aiRoutes: require("./routes/aiRoutes"),
     promptRoutes: require("./routes/promptRoutes"),
+    searchRoutes: require("./routes/searchRoutes"),
 };
 
 const expressRoutes = [
@@ -41,6 +41,7 @@ const expressRoutes = [
     ["/api/notifications", routeModules.notificationRoutes],
     ["/api/ai", routeModules.aiRoutes],
     ["/api/prompts", routeModules.promptRoutes],
+    ["/api/search", routeModules.searchRoutes],
 ];
 
 const app = express();
@@ -49,7 +50,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Validate and mount routers with a useful error message.
+// Validate and mount routers with error messaging.
 for (const [path, router] of expressRoutes) {
     if (typeof router !== "function") {
         throw new TypeError(

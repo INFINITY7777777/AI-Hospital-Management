@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
+import Sidebar from "../components/Sidebar.jsx";
 import MedicalPlusBackground from "../components/MedicalPlusBackground";
 
 export default function Pharmacy() {
@@ -221,6 +222,15 @@ export default function Pharmacy() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#F6F8FC] font-sans antialiased text-slate-900">
+      {/* =====================================================
+          VERTICALLY CENTERED CIRCULAR MENU OVERRIDE CONTAINER
+          Overrides the floating button position & shape without
+          modifying any code inside Sidebar.jsx
+      ====================================================== */}
+      <div className="[&>button]:fixed! [&>button]:top-1/2! [&>button]:left-2! [&>button]:-translate-y-1/2! [&>button]:z-99! [&>button]:h-12! [&>button]:w-12! [&>button]:p-0! [&>button]:justify-center! [&>button]:rounded-full! [&>button]:shadow-xl! [&>button]:bg-[#0b1b32]! [&>button_span]:hidden!">
+        <Sidebar />
+      </div>
+
       {/* Interactive Medical + Canvas Hover Background */}
       <MedicalPlusBackground />
 

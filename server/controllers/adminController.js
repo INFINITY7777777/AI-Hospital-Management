@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const bcrypt = require("bcryptjs");
 
 // Get all active users in the system
 const getAllUsers = async (req, res) => {
@@ -16,12 +17,54 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+// Verify Admin Security MPIN
+const verifyAdminMpin = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { mpin } = req.body;
+
+    if (!mpin) {
+      return res.status(400).json({ error: "Admin MPIN is required." });
+    }
+
+    const adminQuery = await db.query(
+      "SELECT mpin_hash, role FROM users WHERE id = $1",
+      [adminId]
+    );
+
+    if (adminQuery.rows.length === 0) {
+      return res.status(404).json({ error: "Admin user account not found." });
+    }
+
+    const adminUser = adminQuery.rows[0];
+
+    if (!adminUser.mpin_hash) {
+      return res.status(400).json({
+        error: "Admin MPIN not configured. Please set an MPIN in Settings first."
+      });
+    }
+
+    const isMatch = await bcrypt.compare(mpin, adminUser.mpin_hash);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid Admin MPIN." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin MPIN verified successfully."
+    });
+  } catch (error) {
+    console.error("[Verify Admin MPIN Error]:", error);
+    return res.status(500).json({ error: "Failed to verify Admin MPIN." });
+  }
+};
+
 // Update user role
 const updateUserRole = async (req, res) => {
   const { userId } = req.params;
   const { role } = req.body;
 
-  // Validate numeric ID parameter
   if (!userId || isNaN(Number(userId))) {
     return res.status(400).json({ error: "Invalid user ID provided." });
   }
@@ -56,12 +99,10 @@ const deleteUser = async (req, res) => {
   const { userId } = req.params;
   const requestingAdminId = req.user.id;
 
-  // Validate numeric ID parameter
   if (!userId || isNaN(Number(userId))) {
     return res.status(400).json({ error: "Invalid user ID provided." });
   }
 
-  // Prevent admin from deactivating their own account
   if (Number(userId) === Number(requestingAdminId)) {
     return res.status(400).json({ error: "You cannot deactivate your own admin account." });
   }
@@ -85,6 +126,7 @@ const deleteUser = async (req, res) => {
 
 module.exports = {
   getAllUsers,
+  verifyAdminMpin,
   updateUserRole,
   deleteUser
 };

@@ -95,7 +95,6 @@ const addPatient = async (req, res) => {
     try {
         await client.query("BEGIN");
 
-        // Insert patient record
         const patientResult = await client.query(
             `INSERT INTO patients (
                 patient_name, age, gender, blood_group, phone,
@@ -121,30 +120,26 @@ const addPatient = async (req, res) => {
 
         const newPatient = patientResult.rows[0];
 
-        // If a bed is assigned upon patient creation, sync Bed, Admission, and Stay History
         if (bed_number && ward) {
             const bedRes = await client.query(
-                `SELECT id FROM beds WHERE bed_number = $1 AND ward = $2 AND LOWER(status) = 'available' FOR UPDATE`,
+                `SELECT id FROM beds WHERE TRIM(LOWER(bed_number)) = TRIM(LOWER($1)) AND TRIM(LOWER(ward)) = TRIM(LOWER($2)) FOR UPDATE`,
                 [String(bed_number).trim(), String(ward).trim()]
             );
 
             if (bedRes.rows.length > 0) {
                 const targetBedId = bedRes.rows[0].id;
 
-                // Mark bed occupied
                 await client.query(
                     `UPDATE beds SET status = 'Occupied', patient_id = $1 WHERE id = $2`,
                     [newPatient.id, targetBedId]
                 );
 
-                // Create active admission
                 const admRes = await client.query(
                     `INSERT INTO admissions (patient_id, bed_id, admission_date, diagnosis, status)
                      VALUES ($1, $2, $3, $4, 'Admitted') RETURNING id`,
                     [newPatient.id, targetBedId, finalAdmissionDate, diagnosis || ""]
                 );
 
-                // Create active stay history
                 await client.query(
                     `INSERT INTO patient_stay_history (patient_id, admission_id, bed_id, ward, bed_number, start_date, status)
                      VALUES ($1, $2, $3, $4, $5, $6, 'Active')`,
@@ -380,7 +375,7 @@ const updatePatient = async (req, res) => {
         const newWard = finalWard === undefined ? current.ward : (finalWard || null);
         const newBedNumber = finalBedNumber === undefined ? current.bed_number : (finalBedNumber || null);
 
-        // Update main patients table
+        // 1. Update main patients table
         const result = await client.query(
             `UPDATE patients
              SET patient_name = $1,
@@ -414,29 +409,32 @@ const updatePatient = async (req, res) => {
             ]
         );
 
-        // SYNCHRONIZATION WITH BEDS, ADMISSIONS, & STAY HISTORY
-        const bedHasChanged = current.ward !== newWard || current.bed_number !== newBedNumber;
+        // 2. SYNCHRONIZATION WITH BEDS, ADMISSIONS, & STAY HISTORY
+        const oldWard = String(current.ward || "").trim();
+        const oldBed = String(current.bed_number || "").trim();
+        const targetWard = String(newWard || "").trim();
+        const targetBed = String(newBedNumber || "").trim();
+
+        const bedHasChanged = oldWard !== targetWard || oldBed !== targetBed;
 
         if (bedHasChanged) {
-            // 1. Release previous bed if assigned
-            if (current.patient_id || current.bed_number) {
-                await client.query(
-                    `UPDATE beds
-                     SET status = 'Available', patient_id = NULL
-                     WHERE patient_id = $1`,
-                    [Number(id)]
-                );
-            }
+            // Release any bed previously occupied by this patient
+            await client.query(
+                `UPDATE beds
+                 SET status = 'Available', patient_id = NULL
+                 WHERE patient_id = $1`,
+                [Number(id)]
+            );
 
-            // 2. If new bed selected, mark as Occupied and assign patient
-            if (newWard && newBedNumber) {
-                const targetBed = await client.query(
-                    `SELECT id FROM beds WHERE ward = $1 AND bed_number = $2 FOR UPDATE`,
-                    [newWard, newBedNumber]
+            // If a new ward and bed are selected, mark bed as Occupied and assign patient
+            if (targetWard && targetBed) {
+                const bedQuery = await client.query(
+                    `SELECT id FROM beds WHERE TRIM(LOWER(ward)) = TRIM(LOWER($1)) AND TRIM(LOWER(bed_number)) = TRIM(LOWER($2)) FOR UPDATE`,
+                    [targetWard, targetBed]
                 );
 
-                if (targetBed.rows.length > 0) {
-                    const bedId = targetBed.rows[0].id;
+                if (bedQuery.rows.length > 0) {
+                    const bedId = bedQuery.rows[0].id;
 
                     await client.query(
                         `UPDATE beds SET status = 'Occupied', patient_id = $1 WHERE id = $2`,
@@ -465,7 +463,7 @@ const updatePatient = async (req, res) => {
                         admissionId = newAdm.rows[0].id;
                     }
 
-                    // Complete prior active stays and create new active stay history
+                    // Complete prior active stays and record new stay history
                     await client.query(
                         `UPDATE patient_stay_history SET status = 'Completed', end_date = CURRENT_DATE WHERE patient_id = $1 AND status = 'Active'`,
                         [Number(id)]
@@ -474,11 +472,11 @@ const updatePatient = async (req, res) => {
                     await client.query(
                         `INSERT INTO patient_stay_history (patient_id, admission_id, bed_id, ward, bed_number, start_date, status)
                          VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_DATE), 'Active')`,
-                        [Number(id), admissionId, bedId, newWard, newBedNumber, newAdmissionDate]
+                        [Number(id), admissionId, bedId, targetWard, targetBed, newAdmissionDate]
                     );
                 }
             } else {
-                // If ward/bed cleared, complete active stay and clear admission bed_id
+                // If ward/bed cleared, complete active stays and clear admission bed_id
                 await client.query(
                     `UPDATE patient_stay_history SET status = 'Completed', end_date = CURRENT_DATE WHERE patient_id = $1 AND status = 'Active'`,
                     [Number(id)]
@@ -489,7 +487,7 @@ const updatePatient = async (req, res) => {
                 );
             }
         } else if (newAdmissionDate) {
-            // Update dates across tables if only admission date changed
+            // Update admission dates across tables if only date changed
             await client.query(
                 `UPDATE admissions SET admission_date = $1 WHERE patient_id = $2 AND LOWER(status) = 'admitted'`,
                 [newAdmissionDate, Number(id)]
